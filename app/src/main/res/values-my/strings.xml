@@ -1,0 +1,12 @@
+<resources>
+<string name="home">ပင်မ</string>
+<string name="trip">ခရီးစဉ်</string>
+<string name="new_sale">အရောင်းအသစ်</string>
+<string name="sales">အရောင်းများ</string>
+<string name="cash">ငွေသား</string>
+<string name="retry">ထပ်မံကြိုးစားမည်</string>
+<string name="offline">အင်တာနက်မရှိပါ။ ယခင်ရယူထားသောအချက်အလက်များကို ဖတ်ရှုနိုင်ရုံသာဖြစ်သည်။ လုပ်ဆောင်ချက်များအတွက် အင်တာနက်ချိတ်ဆက်ပါ။</string>
+<string name="back_online">အင်တာနက် ပြန်လည်ချိတ်ဆက်ပြီးပါပြီ</string>
+<string name="loading">ရယူနေသည်</string>
+<string name="error">အမှား</string>
+</resources>

@@ -1,0 +1,32 @@
+<resources>
+<style name="Theme.SuperKingSale" parent="Theme.Material3.DayNight.NoActionBar">
+<item name="colorPrimary">@color/workspace_primary</item>
+<item name="colorOnPrimary">@color/workspace_surface</item>
+<item name="colorPrimaryContainer">@color/workspace_tint</item>
+<item name="colorOnPrimaryContainer">@color/workspace_primary</item>
+<item name="colorSecondary">@color/workspace_primary</item>
+<item name="colorSecondaryContainer">@color/workspace_tint</item>
+<item name="colorOnSecondaryContainer">@color/workspace_primary</item>
+<item name="colorSurface">@color/workspace_surface</item>
+<item name="colorOnSurface">@color/workspace_text</item>
+<item name="colorOnSurfaceVariant">@color/workspace_muted</item>
+<item name="colorOutlineVariant">@color/workspace_line</item>
+<item name="android:colorBackground">@color/workspace_surface</item>
+<item name="android:fontFamily">sans</item>
+<item name="android:windowLightStatusBar">?attr/isLightTheme</item>
+<item name="materialButtonStyle">@style/Widget.SuperKing.Button</item>
+<item name="shapeAppearanceSmallComponent">@style/Shape.SuperKing</item>
+<item name="shapeAppearanceMediumComponent">@style/Shape.SuperKing</item>
+</style>
+<style name="Shape.SuperKing" parent="ShapeAppearance.Material3.Corner.Small"><item name="cornerSize">6dp</item></style>
+<style name="Widget.SuperKing.Button" parent="Widget.Material3.Button">
+    <item name="cornerRadius">6dp</item><item name="android:minHeight">48dp</item>
+    <item name="android:textSize">14sp</item><item name="android:textStyle">bold</item>
+</style>
+<style name="Theme.SuperKingSale.Starting" parent="Theme.SplashScreen.IconBackground">
+    <item name="windowSplashScreenBackground">@color/splash_background</item>
+    <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+    <item name="windowSplashScreenIconBackgroundColor">#FFFFFF</item>
+    <item name="postSplashScreenTheme">@style/Theme.SuperKingSale</item>
+</style>
+</resources>

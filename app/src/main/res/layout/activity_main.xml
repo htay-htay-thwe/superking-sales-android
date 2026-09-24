@@ -1,0 +1,25 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/shell" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/workspace_background">
+<View android:id="@+id/status_bar_scrim" android:layout_width="match_parent" android:layout_height="0dp" android:layout_gravity="top" android:background="@color/workspace_accent" android:elevation="2dp" />
+<com.example.superkingsale.ui.WorkspaceColumn android:id="@+id/app_content" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_gravity="center_horizontal" android:orientation="vertical" android:background="@color/workspace_surface">
+<LinearLayout android:id="@+id/toolbar" android:layout_width="match_parent" android:layout_height="@dimen/foundation_phone_header" android:orientation="vertical" android:paddingStart="@dimen/foundation_space_3" android:paddingEnd="@dimen/foundation_space_2">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageButton android:id="@+id/workspace_back" android:layout_width="@dimen/foundation_touch_target" android:layout_height="@dimen/foundation_touch_target" android:src="@drawable/ic_back" android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="Back" android:visibility="gone" app:tint="@color/workspace_text" />
+        <ImageView android:layout_width="36dp" android:layout_height="36dp" android:src="@mipmap/ic_launcher" android:importantForAccessibility="no" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:paddingHorizontal="8dp">
+            <TextView android:id="@+id/business_name" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Super King" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/workspace_text" android:maxLines="1" android:ellipsize="end" />
+            <TextView android:id="@+id/workspace_label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Sales workspace" android:textSize="@dimen/foundation_text_eyebrow" android:textColor="@color/workspace_muted" />
+        </LinearLayout>
+        <TextView android:id="@+id/online_status" android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingHorizontal="12dp" android:text="Online" android:textSize="11sp" android:textColor="@color/workspace_success" android:visibility="gone" />
+        <TextView android:id="@+id/account_name" android:layout_width="wrap_content" android:layout_height="wrap_content" android:maxWidth="180dp" android:maxLines="2" android:ellipsize="end" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/workspace_text" android:visibility="gone" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/account_menu" style="@style/Widget.Material3.Button.TextButton" android:layout_width="48dp" android:layout_height="48dp" android:padding="0dp" android:minWidth="48dp" android:text="SK" app:cornerRadius="24dp" app:backgroundTint="@color/workspace_tint" android:textColor="@color/workspace_primary" android:contentDescription="Account menu" />
+    </LinearLayout>
+</LinearLayout>
+<HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:scrollbars="none" android:background="@color/workspace_background">
+<LinearLayout android:id="@+id/wide_nav" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingHorizontal="@dimen/foundation_nav_padding" android:visibility="gone" />
+</HorizontalScrollView>
+<View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/workspace_line" />
+<TextView android:id="@+id/connection" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="@dimen/foundation_screen_padding" android:visibility="gone" android:background="?attr/colorErrorContainer" android:textColor="?attr/colorOnErrorContainer" android:text="@string/offline" />
+<androidx.fragment.app.FragmentContainerView android:id="@+id/nav_host" android:name="androidx.navigation.fragment.NavHostFragment" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" app:defaultNavHost="true" app:navGraph="@navigation/main_navigation" />
+<com.google.android.material.bottomnavigation.BottomNavigationView android:id="@+id/bottom_nav" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="@dimen/foundation_bottom_navigation" android:background="@color/workspace_surface" app:elevation="0dp" app:itemActiveIndicatorStyle="@style/Widget.SuperKing.NavIndicator" app:labelVisibilityMode="labeled" app:menu="@menu/bottom_navigation" />
+</com.example.superkingsale.ui.WorkspaceColumn>
+</FrameLayout>

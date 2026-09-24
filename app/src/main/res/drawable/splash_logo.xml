@@ -1,0 +1,6 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item><shape><size android:width="240dp" android:height="240dp" /><solid android:color="@android:color/transparent" /></shape></item>
+    <item android:left="48dp" android:right="48dp" android:top="48dp" android:bottom="48dp">
+        <bitmap android:src="@drawable/superking_logo" android:gravity="fill" android:filter="true" />
+    </item>
+</layer-list>

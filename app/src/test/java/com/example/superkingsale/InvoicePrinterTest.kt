@@ -1,0 +1,33 @@
+package com.example.superkingsale
+
+import com.example.superkingsale.data.Record
+import com.example.superkingsale.ui.InvoicePrinter
+import org.junit.Assert.*
+import org.junit.Test
+
+class InvoicePrinterTest {
+    @Test fun receiptContentKeepsPhysicalWidthEvenWhenPrintServiceChangesMedia() {
+        for ((paper, width) in mapOf("50mm" to "46mm", "58mm" to "54mm", "80mm" to "76mm")) {
+            val html = InvoicePrinter.document(Record(), Record(), paper)
+            assertTrue(html.contains("width:$width;max-width:100%"))
+            assertTrue(html.contains("body class=\"thermal"))
+        }
+    }
+    @Test fun invoiceEscapesCustomerContentAndRejectsUntrustedLogo() {
+        val sale = Record.parse("""{"reference":"SAL-1","status":"voided","customer":{"name":"<script>alert(1)</script>"},"notes":"<img src=x onerror=alert(1)>"}""")
+        val branding = Record.parse("""{"business_name":"A & B","logo_url":"https://untrusted.example/logo.png"}""")
+        val html = InvoicePrinter.document(sale, branding)
+        assertTrue(html.contains("A &amp; B"))
+        assertTrue(html.contains("&lt;script&gt;"))
+        assertFalse(html.contains("<script>"))
+        assertFalse(html.contains("https://untrusted.example"))
+        assertTrue(html.contains("class='void'"))
+    }
+    @Test fun invoiceUsesSelectedLanguageAndTrustedBranding() {
+        val html = InvoicePrinter.document(Record(), Record.parse("""{"logo_url":"https://www.superkingmyanmar.com/public/storage/logo.png"}""")) {
+            if (it == "INVOICE") "Translated invoice" else it
+        }
+        assertTrue(html.contains("Translated invoice"))
+        assertTrue(html.contains("src='https://www.superkingmyanmar.com/public/storage/logo.png'"))
+    }
+}

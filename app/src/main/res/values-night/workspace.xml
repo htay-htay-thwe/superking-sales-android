@@ -1,0 +1,18 @@
+<resources>
+    <color name="workspace_primary">#FFB477</color>
+    <color name="workspace_accent">#FF962F</color>
+    <color name="workspace_tint">#392A1E</color>
+    <color name="workspace_background">#101820</color>
+    <color name="workspace_surface">#1A2430</color>
+    <color name="workspace_text">#F1F4F8</color>
+    <color name="workspace_muted">#B1BDCF</color>
+    <color name="workspace_line">#394552</color>
+    <color name="workspace_success">#83D9A6</color>
+    <color name="workspace_success_tint">#19372A</color>
+    <color name="workspace_info">#7BBCF2</color>
+    <color name="workspace_info_tint">#193247</color>
+    <color name="workspace_warning">#F2BD55</color>
+    <color name="workspace_warning_tint">#3D321C</color>
+    <color name="workspace_error">#FF858B</color>
+    <color name="workspace_error_tint">#462428</color>
+</resources>

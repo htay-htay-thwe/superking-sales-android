@@ -1,0 +1,3 @@
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:src="@drawable/superking_eagle_mono" android:gravity="fill"
+    android:filter="true" android:tint="@android:color/white" />

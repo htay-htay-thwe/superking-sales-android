@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name" translatable="false">Super King Sale</string>
+    <string name="home">Home</string>
+    <string name="trip">Trip</string>
+    <string name="new_sale">New sale</string>
+    <string name="sales">Sales</string>
+    <string name="cash">Cash</string>
+    <string name="retry">Retry</string>
+    <string name="offline">You are offline. Previously loaded information is read-only. Connect to the internet to complete transactions.</string>
+    <string name="back_online">Back online</string>
+    <string name="loading">Loading</string>
+    <string name="error">Error</string>
+</resources>

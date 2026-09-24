@@ -1,0 +1,21 @@
+<resources>
+    <color name="workspace_primary">#BC5500</color>
+    <color name="workspace_accent">#FF8000</color>
+    <color name="workspace_tint">#FFF1E5</color>
+    <color name="workspace_background">#F2F5F5</color>
+    <color name="workspace_surface">#FFFFFF</color>
+    <color name="workspace_text">#172033</color>
+    <color name="workspace_muted">#596579</color>
+    <color name="workspace_line">#DEE3EA</color>
+    <color name="workspace_success">#167447</color>
+    <color name="workspace_success_tint">#EAF7EF</color>
+    <color name="workspace_info">#1762A3</color>
+    <color name="workspace_info_tint">#E8F3FC</color>
+    <color name="workspace_warning">#865700</color>
+    <color name="workspace_warning_tint">#FFF4D6</color>
+    <color name="workspace_error">#B52F38</color>
+    <color name="workspace_error_tint">#FDECEE</color>
+    <bool name="wide_workspace">false</bool>
+    <dimen name="workspace_gutter">16dp</dimen>
+    <style name="Widget.SuperKing.NavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator"><item name="android:color">@color/workspace_tint</item><item name="shapeAppearance">@style/Shape.SuperKing</item></style>
+</resources>

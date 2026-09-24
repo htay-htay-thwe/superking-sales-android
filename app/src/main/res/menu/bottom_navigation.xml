@@ -1,0 +1,7 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<item android:id="@id/home" android:title="@string/home" android:icon="@drawable/ic_home" />
+<item android:id="@id/trip" android:title="@string/trip" android:icon="@drawable/ic_trip" />
+<item android:id="@id/new_sale" android:title="@string/new_sale" android:icon="@drawable/ic_new_sale" />
+<item android:id="@id/sales" android:title="@string/sales" android:icon="@drawable/ic_sales" />
+<item android:id="@id/cash" android:title="@string/cash" android:icon="@drawable/ic_cash" />
+</menu>

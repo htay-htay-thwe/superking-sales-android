@@ -1,0 +1,107 @@
+{
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "capturedAt": "2026-09-18T06:59:17.376Z",
+  "screens": [
+    {
+      "label": "login",
+      "title": "Royal Myanmar King Company Limited · Stock & Inventory Management",
+      "url": "https://www.superkingmyanmar.com/public/sales/login",
+      "viewport": "01-login-login-viewport.png",
+      "fullPage": "01-login-login-full.png"
+    },
+    {
+      "label": "dashboard",
+      "title": "Royal Myanmar King Company Limited · Stock & Inventory Management",
+      "url": "https://www.superkingmyanmar.com/public/sales/dashboard",
+      "viewport": "02-dashboard-dashboard-viewport.png",
+      "fullPage": "02-dashboard-dashboard-full.png"
+    },
+    {
+      "label": "dashboard-menu-open",
+      "title": "Royal Myanmar King Company Limited · Stock & Inventory Management",
+      "url": "https://www.superkingmyanmar.com/public/sales/dashboard",
+      "viewport": "03-dashboard-dashboard-menu-open-viewport.png",
+      "fullPage": "03-dashboard-dashboard-menu-open-full.png"
+    },
+    {
+      "label": "trip",
+      "title": "Royal Myanmar King Company Limited · Stock & Inventory Management",
+      "url": "https://www.superkingmyanmar.com/public/sales/trip",
+      "viewport": "04-trip-trip-viewport.png",
+      "fullPage": "04-trip-trip-full.png"
+    },
+    {
+      "label": "my stock",
+      "title": "Royal Myanmar King Company Limited · Stock & Inventory Management",
+      "url": "https://www.superkingmyanmar.com/public/sales/my-stock",
+      "viewport": "05-my-stock-my-stock-viewport.png",
+      "fullPage": "05-my-stock-my-stock-full.png"
+    },
+    {
+      "label": "profile",
+      "title": "Royal Myanmar King Company Limited · Stock & Inventory Management",
+      "url": "https://www.superkingmyanmar.com/public/sales/profile",
+      "viewport": "06-profile-profile-viewport.png",
+      "fullPage": "06-profile-profile-full.png"
+    },
+    {
+      "label": "customers",
+      "title": "Royal Myanmar King Company Limited · Stock & Inventory Management",
+      "url": "https://www.superkingmyanmar.com/public/sales/customers",
+      "viewport": "07-customers-customers-viewport.png",
+      "fullPage": "07-customers-customers-full.png"
+    },
+    {
+      "label": "new",
+      "title": "Royal Myanmar King Company Limited · Stock & Inventory Management",
+      "url": "https://www.superkingmyanmar.com/public/sales/customers/new",
+      "viewport": "08-customers-new-new-viewport.png",
+      "fullPage": "08-customers-new-new-full.png"
+    },
+    {
+      "label": "new sale",
+      "title": "Royal Myanmar King Company Limited · Stock & Inventory Management",
+      "url": "https://www.superkingmyanmar.com/public/sales/new-sale",
+      "viewport": "09-new-sale-new-sale-viewport.png",
+      "fullPage": "09-new-sale-new-sale-full.png"
+    },
+    {
+      "label": "sales history",
+      "title": "Royal Myanmar King Company Limited · Stock & Inventory Management",
+      "url": "https://www.superkingmyanmar.com/public/sales/sales-history",
+      "viewport": "10-sales-history-sales-history-viewport.png",
+      "fullPage": "10-sales-history-sales-history-full.png"
+    },
+    {
+      "label": "cash hold",
+      "title": "Royal Myanmar King Company Limited · Stock & Inventory Management",
+      "url": "https://www.superkingmyanmar.com/public/sales/cash-hold",
+      "viewport": "11-cash-hold-cash-hold-viewport.png",
+      "fullPage": "11-cash-hold-cash-hold-full.png"
+    },
+    {
+      "label": "cash submissions",
+      "title": "Royal Myanmar King Company Limited · Stock & Inventory Management",
+      "url": "https://www.superkingmyanmar.com/public/sales/cash-submissions",
+      "viewport": "12-cash-submissions-cash-submissions-viewport.png",
+      "fullPage": "12-cash-submissions-cash-submissions-full.png"
+    },
+    {
+      "label": "SAL-000027\nANDROID-QA-20260918-105339 TEST SHOP · Sep 18, 20",
+      "title": "Royal Myanmar King Company Limited · Stock & Inventory Management",
+      "url": "https://www.superkingmyanmar.com/public/sales/sales-history/27",
+      "viewport": "13-sales-history-27-sal-000027-android-qa-20260918-105339-test-shop-sep-18-20-viewport.png",
+      "fullPage": "13-sales-history-27-sal-000027-android-qa-20260918-105339-test-shop-sep-18-20-full.png"
+    },
+    {
+      "label": "RTR-000010\nMandalay Warehouse\n6 products · 12 units\nIn trans",
+      "title": "Royal Myanmar King Company Limited · Stock & Inventory Management",
+      "url": "https://www.superkingmyanmar.com/public/sales/receivings/15",
+      "viewport": "14-receivings-15-rtr-000010-mandalay-warehouse-6-products-12-units-in-trans-viewport.png",
+      "fullPage": "14-receivings-15-rtr-000010-mandalay-warehouse-6-products-12-units-in-trans-full.png"
+    }
+  ]
+}
