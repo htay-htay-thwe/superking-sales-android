@@ -95,7 +95,7 @@ internal fun Context.column(padding: Int = 0) = LinearLayout(this).apply {
 }
 /** Phone uses a bottom sheet; tablets use the same content as a centered, width-limited modal sheet. */
 internal fun View.fitTabletBottomSheet(maxWidthDp: Int = 720) {
-    if (resources.configuration.screenWidthDp < 600) return
+    if (resources.configuration.smallestScreenWidthDp < 600) return
     layoutParams = layoutParams.apply { width = context.dp(maxWidthDp).coerceAtMost(resources.displayMetrics.widthPixels) }
     (layoutParams as? androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams)?.gravity = Gravity.CENTER_HORIZONTAL
     background = GradientDrawable().apply {

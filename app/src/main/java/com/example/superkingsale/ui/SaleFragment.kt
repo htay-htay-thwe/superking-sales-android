@@ -488,7 +488,7 @@ class SaleFragment : Fragment(R.layout.fragment_workspace) {
                 findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
                     sheet.fitTabletBottomSheet()
                     val availableHeight = (resources.displayMetrics.heightPixels * .9f).toInt()
-                    sheet.layoutParams.height = if (resources.configuration.screenWidthDp >= 600) {
+                    sheet.layoutParams.height = if (resources.configuration.smallestScreenWidthDp >= 600) {
                         availableHeight.coerceAtMost(requireContext().dp(760))
                     } else availableHeight
                     sheet.minimumHeight = 0

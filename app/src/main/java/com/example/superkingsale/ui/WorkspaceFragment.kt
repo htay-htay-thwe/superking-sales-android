@@ -473,7 +473,7 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
         keepDialog = false
         vm.saved["dialog"] = "Change password"
         val ui = requireContext()
-        val isTablet = resources.configuration.screenWidthDp >= 600
+        val isTablet = resources.configuration.smallestScreenWidthDp >= 600
         val constrainedHeight = !isTablet &&
             resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val frame = ui.column().apply {
@@ -596,7 +596,7 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             setOnShowListener { findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
                 sheet.fitTabletBottomSheet()
                 val availableHeight = (resources.displayMetrics.heightPixels * .9f).toInt()
-                sheet.layoutParams.height = if (resources.configuration.screenWidthDp >= 600) {
+                sheet.layoutParams.height = if (resources.configuration.smallestScreenWidthDp >= 600) {
                     availableHeight.coerceAtMost(ui.dp(760))
                 } else availableHeight
                 sheet.requestLayout()
@@ -723,7 +723,7 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
         val available = vm.state.value.options.number("available_to_submit")
         val trip = vm.state.value.extra
         val ui = requireContext()
-        val constrainedHeight = resources.configuration.screenWidthDp < 600 &&
+        val constrainedHeight = resources.configuration.smallestScreenWidthDp < 600 &&
             resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val frame = ui.column().apply {
             setBackgroundColor(context.ink(R.color.workspace_surface))
