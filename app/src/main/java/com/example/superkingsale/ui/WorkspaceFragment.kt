@@ -593,7 +593,11 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             setContentView(frame)
             setOnShowListener { findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
                 sheet.fitTabletBottomSheet()
-                sheet.layoutParams.height = (resources.displayMetrics.heightPixels * .9f).toInt(); sheet.requestLayout()
+                val availableHeight = (resources.displayMetrics.heightPixels * .9f).toInt()
+                sheet.layoutParams.height = if (resources.configuration.screenWidthDp >= 600) {
+                    availableHeight.coerceAtMost(ui.dp(760))
+                } else availableHeight
+                sheet.requestLayout()
                 com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheet).apply {
                     state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
                     skipCollapsed = true; isHideable = false; isDraggable = false
