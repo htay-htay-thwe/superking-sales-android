@@ -6,6 +6,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class WorkspacePresentationTest {
+    @Test fun customerOptionsExposeRegionsAtEitherResponseLevel() {
+        assertEquals(3L, Record.parse("""{"regions":[{"id":3,"name":"Yangon"}]}""").regionRows().single().id)
+        assertEquals(3L, Record.parse("""{"representative":{"regions":[{"id":3,"name":"Yangon"}]}}""").regionRows().single().id)
+        assertEquals(3L, Record.parse("""{"data":{"regions":[{"id":3,"name":"Yangon"}]}}""").regionRows().single().id)
+    }
+
     @Test fun draftDetailsKeepEveryExplicitCommand() {
         val actions = listOf("edit", "post", "delete", "print").map { CardAction(it, it, 44) }
         val data = Record.parse("""{"data":{"id":44,"reference":"SAL-044","status":"draft","customer":{"name":"Shop"}}}""")
@@ -26,9 +32,9 @@ class WorkspacePresentationTest {
         val state = WorkspaceState(data = Record.parse("""{"summary":{"on_hand":24,"foc_on_hand":2,"incoming":12}}"""),
             extra = Record.parse("""{"data":[{"id":15,"reference":"RTR-15","status":"dispatched","total_quantity":12}]}"""))
         val cards = workspacePresentation("stock", state, emptyList(), "stock")
-        val preview = cards.first { it.key == "stock-receivings" }.children.single()
+        val preview = cards.first { it.key == "stock-receivings" }.children.first { it.key == "incoming15" }
         assertEquals(CardAction("View receiving", "receiving", 15), preview.actions.single())
-        assertEquals("dispatched", preview.status)
+        assertEquals("In transit", preview.status)
     }
     @Test fun cashSummaryDoesNotSubtractPendingHandoverTwice() {
         val state = WorkspaceState(options = Record.parse("""{"cash_hold":12000,"available_to_submit":9000,"pending_submissions":3000}"""),
@@ -41,20 +47,25 @@ class WorkspacePresentationTest {
         assertEquals(money(9000), metrics[1].value)
         assertEquals(money(12000), cards.first { it.key == "cash-breakdown" }.metrics.last().value)
     }
-    @Test fun pendingAndHistoryStockViewsDoNotIncludeOnHandPreview() {
-        for (tab in listOf("pending", "history")) {
-            val cards = workspacePresentation("stock", WorkspaceState(), listOf(Card("transfer9", "RTR-9")), tab)
-            assertFalse(cards.any { it.key == "stock-receivings" || it.kind == CardKind.METRICS })
-            assertTrue(cards.any { it.key == "transfer9" })
-        }
+    @Test fun historyKeepsStockSummaryAndGroupsCompletedIssues() {
+        val history = Record.parse("""{"data":[{"id":9,"reference":"RTR-9","status":"received","total_quantity":65,"product_count":13,"warehouse":{"name":"Mandalay Warehouse"}}],"meta":{"total":1}}""")
+        val summary = Record.parse("""{"summary":{"on_hand":1240,"incoming":216}}""")
+        val cards = workspacePresentation("stock", WorkspaceState(data = history, options = summary), emptyList(), "history")
+        assertTrue(cards.any { it.key == "stock-on-hand" })
+        assertTrue(cards.any { it.key == "stock-incoming" })
+        val group = cards.first { it.key == "stock-history" }
+        assertEquals("1 records", group.status)
+        assertEquals("received", group.children.first().status)
     }
     @Test fun receivingUsesAlignedProductRowsAndTotalFooter() {
         val data = Record.parse("""{"data":{"reference":"RTR-10","total_quantity":48,"items":[{"id":3,"quantity":2,"base_quantity":48,"foc_quantity":1,"foc_base_quantity":2,"product":{"name":"Oil","sku":"SKU-3"},"unit":{"name":"box"},"foc_unit":{"name":"bottle"}}]}}""")
-        val cards = workspacePresentation("receiving", WorkspaceState(data = data), emptyList(), "")
+        val cards = workspacePresentation("receiving", WorkspaceState(data = data), listOf(Card("audit", "Receiving record")), "")
         val shipment = cards.first { it.key == "shipment" }
-        assertEquals(CardKind.TABLE_ROW, shipment.children.first().kind)
+        assertEquals(CardKind.SHIPMENT_ROW, shipment.children.first().kind)
         assertEquals(listOf("Paid", "FOC", "Total base"), shipment.children.first().metrics.map { it.title })
+        assertEquals(CardKind.SHIPMENT_TOTAL, shipment.children.last().kind)
         assertEquals("shipment-total", shipment.children.last().key)
+        assertFalse(cards.any { it.key == "audit" })
     }
     @Test fun saleDetailProductsUseTheSharedTableContract() {
         val data = Record.parse("""{"data":{"reference":"SAL-1","customer":{"name":"Shop"},"items":[{"id":7,"quantity":2,"foc_quantity":0,"unit_price":1000,"line_total":2000,"product":{"name":"Oil","sku":"SKU-7"},"unit":{"name":"box"},"foc_unit":{"name":"box"}}]}}""")

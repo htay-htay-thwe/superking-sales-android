@@ -20,8 +20,8 @@
 </style>
 <style name="Shape.SuperKing" parent="ShapeAppearance.Material3.Corner.Small"><item name="cornerSize">6dp</item></style>
 <style name="Widget.SuperKing.Button" parent="Widget.Material3.Button">
-    <item name="cornerRadius">6dp</item><item name="android:minHeight">48dp</item>
-    <item name="android:textSize">14sp</item><item name="android:textStyle">bold</item>
+    <item name="cornerRadius">6dp</item><item name="android:minHeight">44dp</item>
+    <item name="android:textSize">12sp</item><item name="android:textStyle">bold</item>
 </style>
 <style name="Theme.SuperKingSale.Starting" parent="Theme.SplashScreen.IconBackground">
     <item name="windowSplashScreenBackground">@color/splash_background</item>

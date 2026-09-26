@@ -14,17 +14,19 @@ import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
-import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.*
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.superkingsale.SalesApplication
 import com.example.superkingsale.ui.*
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.coroutines.launch
 
 /** Explicit selections only: no discovery scanning, no automatic writes after permission grants/recreation. */
-class ThermalPrintDialog : DialogFragment() {
+class ThermalPrintDialog : BottomSheetDialogFragment() {
     private val app get() = requireActivity().application as SalesApplication
     private val vm: ThermalPrintViewModel by viewModels { viewModelFactory { initializer { ThermalPrintViewModel(app, createSavedStateHandle()) } } }
     private val prefs get() = requireContext().getSharedPreferences("printer.${requireArguments().getLong("userId")}", Context.MODE_PRIVATE)
@@ -37,7 +39,23 @@ class ThermalPrintDialog : DialogFragment() {
     }
     override fun onCreateDialog(savedInstanceState: Bundle?): android.app.Dialog {
         val context = requireContext()
-        val root = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; setPadding(context.dp(20), 0, context.dp(20), context.dp(12)) }
+        val frame = context.column().apply { setBackgroundColor(context.ink(com.example.superkingsale.R.color.workspace_surface)) }
+        val header = context.column(12)
+        val headerRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL
+        }
+        headerRow.addView(context.column().apply {
+            copyText("Thermal printer / PDF", 20f)
+            copyText("Choose a connection, test the device, or save a PDF.", 12f, color = com.example.superkingsale.R.color.workspace_muted)
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        headerRow.addView(com.google.android.material.button.MaterialButton(context, null, com.google.android.material.R.attr.materialIconButtonStyle).apply {
+            text = "×"; textSize = 26f; includeFontPadding = false; gravity = android.view.Gravity.CENTER
+            setPadding(0, 0, 0, 0); contentDescription = context.tr("Close"); setOnClickListener { dismiss() }
+        }, LinearLayout.LayoutParams(context.dp(44), context.dp(44)))
+        header.addView(headerRow)
+        frame.addView(header)
+        frame.addView(android.view.View(context).apply { setBackgroundColor(context.ink(com.example.superkingsale.R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, context.dp(1)))
+        val root = context.column(16).apply { setBackgroundColor(context.ink(com.example.superkingsale.R.color.workspace_surface)) }
         status = root.label("")
         val form = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }; root.addView(form); controls = form
         fun pref(key: String, fallback: String) = prefs.getString(key, fallback).orEmpty()
@@ -150,8 +168,30 @@ class ThermalPrintDialog : DialogFragment() {
             isCancelable = !state.busy
             (dialog as? androidx.appcompat.app.AlertDialog)?.getButton(-2)?.isEnabled = !state.busy
         } } }
-        return LocalizedDialogBuilder(context).setTitle("Thermal printer / PDF")
-            .setView(ScrollView(context).apply { addView(root) }).setNegativeButton("Close", null).create()
+        frame.addView(androidx.core.widget.NestedScrollView(context).apply {
+            isFillViewport = true
+            isNestedScrollingEnabled = true
+            addView(root)
+        }, LinearLayout.LayoutParams(-1, 0, 1f))
+        val footer = context.column(10).apply { setBackgroundColor(context.ink(com.example.superkingsale.R.color.workspace_background)) }
+        footer.addView(android.view.View(context).apply { setBackgroundColor(context.ink(com.example.superkingsale.R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, context.dp(1)))
+        footer.button("Close") { dismiss() }.outlined()
+        frame.addView(footer)
+        return BottomSheetDialog(context).apply {
+            setContentView(frame)
+            setOnShowListener {
+                findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
+                    sheet.layoutParams.height = (resources.displayMetrics.heightPixels * .9f).toInt()
+                    sheet.requestLayout()
+                    BottomSheetBehavior.from(sheet).apply {
+                        state = BottomSheetBehavior.STATE_EXPANDED
+                        skipCollapsed = true
+                        isHideable = false
+                        isDraggable = false
+                    }
+                }
+            }
+        }
     }
     private fun unregisterUsb() { usbReceiver?.let { runCatching { context?.unregisterReceiver(it) } }; usbReceiver = null }
     override fun onDestroyView() { unregisterUsb(); status = null; controls = null; super.onDestroyView() }

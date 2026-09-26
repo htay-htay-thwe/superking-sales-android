@@ -21,19 +21,21 @@ fun number(value: Long) = NumberFormat.getIntegerInstance().format(value)
 fun Context.dp(value: Int) = (resources.displayMetrics.density * value).toInt()
 fun LinearLayout.heading(title: String, subtitle: String = "") {
     addView(TextView(context).apply {
-        text = context.tr(title); setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, resources.getDimension(com.example.superkingsale.R.dimen.foundation_text_title)); setTypeface(typeface, android.graphics.Typeface.BOLD)
+        text = context.tr(title); setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, resources.getDimension(com.example.superkingsale.R.dimen.foundation_text_title)); setTypeface(typeface, android.graphics.Typeface.NORMAL)
         setTextColor(context.ink(com.example.superkingsale.R.color.workspace_text))
         setPadding(0, context.dp(8), 0, context.dp(12)); contentDescription = context.tr(title)
     })
     if (subtitle.isNotBlank()) label(subtitle)
 }
 fun LinearLayout.label(value: String): TextView = TextView(context).also {
-    it.text = context.tr(value); it.textSize = 14f; it.setTextColor(context.ink(com.example.superkingsale.R.color.workspace_muted)); it.setPadding(0, context.dp(6), 0, context.dp(10)); addView(it)
+    it.text = context.tr(value); it.textSize = 12f; it.setTextColor(context.ink(com.example.superkingsale.R.color.workspace_muted)); it.setPadding(0, context.dp(4), 0, context.dp(8)); addView(it)
 }
 fun LinearLayout.button(title: String, enabled: Boolean = true, click: () -> Unit): MaterialButton =
     MaterialButton(context).also { b ->
         b.text = context.tr(title); b.isAllCaps = false; b.isEnabled = enabled
-        b.layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = context.dp(4) }
+        b.minHeight = context.dp(48); b.minimumHeight = context.dp(48); b.textSize = 12f
+        b.setPadding(context.dp(12), 0, context.dp(12), 0)
+        b.layoutParams = LinearLayout.LayoutParams(-1, context.dp(48)).apply { topMargin = context.dp(8); bottomMargin = context.dp(2) }
         b.setOnClickListener { click() }; addView(b)
     }
 fun LinearLayout.field(title: String, value: String = "", type: Int = InputType.TYPE_CLASS_TEXT,
@@ -41,11 +43,17 @@ fun LinearLayout.field(title: String, value: String = "", type: Int = InputType.
     val wrapper = TextInputLayout(context).apply {
         hint = context.tr(title)
         boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
-        layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = context.dp(10); bottomMargin = context.dp(4) }
+        setBoxCornerRadii(context.dp(6).toFloat(), context.dp(6).toFloat(), context.dp(6).toFloat(), context.dp(6).toFloat())
+        boxStrokeWidth = context.dp(1); boxStrokeWidthFocused = context.dp(1)
+        boxStrokeColor = context.ink(com.example.superkingsale.R.color.workspace_line)
+        defaultHintTextColor = android.content.res.ColorStateList.valueOf(context.ink(com.example.superkingsale.R.color.workspace_muted))
+        minimumHeight = context.dp(48)
+        layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = context.dp(8); bottomMargin = context.dp(2) }
     }
     val edit = TextInputEditText(wrapper.context).apply {
-        textSize = 14f
-        minHeight = context.dp(56)
+        textSize = 12f
+        minHeight = context.dp(48); minimumHeight = context.dp(48); setPaddingRelative(context.dp(12), 0, context.dp(12), 0)
+        layoutParams = LinearLayout.LayoutParams(-1, context.dp(48))
         filters = arrayOf(android.text.InputFilter.LengthFilter(2000))
         inputType = type; setText(value); setSingleLine(type and InputType.TYPE_TEXT_FLAG_MULTI_LINE == 0)
         isSaveEnabled = type and InputType.TYPE_TEXT_VARIATION_PASSWORD == 0
@@ -63,18 +71,38 @@ fun LinearLayout.choice(title: String, values: List<Pair<String, String>>, selec
     val wrapper = TextInputLayout(context).apply {
         hint = context.tr(title); boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
         endIconMode = TextInputLayout.END_ICON_DROPDOWN_MENU
-        layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = context.dp(10) }
+        setBoxCornerRadii(context.dp(6).toFloat(), context.dp(6).toFloat(), context.dp(6).toFloat(), context.dp(6).toFloat())
+        boxStrokeWidth = context.dp(1); boxStrokeWidthFocused = context.dp(1)
+        boxStrokeColor = context.ink(com.example.superkingsale.R.color.workspace_line)
+        defaultHintTextColor = android.content.res.ColorStateList.valueOf(context.ink(com.example.superkingsale.R.color.workspace_muted))
+        minimumHeight = context.dp(48)
+        layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = context.dp(8); bottomMargin = context.dp(2) }
     }
     val edit = com.google.android.material.textfield.MaterialAutoCompleteTextView(wrapper.context).apply {
-        textSize = 14f
+        textSize = 11f
         inputType = InputType.TYPE_NULL
         keyListener = null
-        minHeight = context.dp(56)
-        setPaddingRelative(context.dp(16), context.dp(16), context.dp(48), context.dp(16))
-        layoutParams = LinearLayout.LayoutParams(-1, -2)
+        threshold = 0
+        minHeight = context.dp(48)
+        setPaddingRelative(context.dp(12), 0, context.dp(44), 0)
+        layoutParams = LinearLayout.LayoutParams(-1, context.dp(48))
     }
-    edit.setAdapter(ArrayAdapter(context, android.R.layout.simple_dropdown_item_1line, values.map { context.tr(it.second) }))
+    edit.setAdapter(object : ArrayAdapter<String>(context, android.R.layout.simple_dropdown_item_1line, values.map { context.tr(it.second) }) {
+        override fun getView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View =
+            super.getView(position, convertView, parent).apply {
+                minimumHeight = 0
+                layoutParams = android.widget.AbsListView.LayoutParams(-1, context.dp(32))
+                if (this is android.widget.TextView) {
+                    textSize = 11f
+                    includeFontPadding = false
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                }
+                setPadding(context.dp(8), 0, context.dp(8), 0)
+            }
+    })
     edit.setText(context.tr(values.find { it.first == selected }?.second.orEmpty()), false)
+    edit.setOnClickListener { edit.showDropDown() }
+    edit.setOnFocusChangeListener { _, focused -> if (focused) edit.post { edit.showDropDown() } }
     edit.setOnItemClickListener { _, _, index, _ -> values.getOrNull(index)?.let { onSelect(it.first) } }
     wrapper.addView(edit); addView(wrapper)
     return edit
@@ -91,7 +119,7 @@ data class Card(val key: String, val title: String, val value: String = "", val 
     val eyebrow: String = "", val status: String = "", val metrics: List<Metric> = emptyList(),
     val children: List<Card> = emptyList(), val featured: Boolean = false)
 
-class CardAdapter(var controls: ((LinearLayout) -> Unit)? = null, private val action: (CardAction) -> Unit) : ListAdapter<Card, CardAdapter.Holder>(
+class CardAdapter(var controls: ((LinearLayout, String) -> Unit)? = null, private val action: (CardAction) -> Unit) : ListAdapter<Card, CardAdapter.Holder>(
     object : DiffUtil.ItemCallback<Card>() {
         override fun areItemsTheSame(old: Card, new: Card) = old.key == new.key
         override fun areContentsTheSame(old: Card, new: Card) = old == new

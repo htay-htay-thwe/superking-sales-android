@@ -90,7 +90,7 @@ class PullRefreshTest {
             }
             try {
                 pull(scenario, "dashboard")
-                onView(withText("Hello, Test Representative")).check(matches(isDisplayed()))
+                onView(withText("Route overview")).check(matches(isDisplayed()))
                 onView(withId(R.id.status)).check(matches(isDisplayed()))
             } finally { app.server.dispatcher = original }
             pull(scenario, "dashboard")

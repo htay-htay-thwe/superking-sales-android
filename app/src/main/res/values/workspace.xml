@@ -15,7 +15,9 @@
     <color name="workspace_warning_tint">#FFF4D6</color>
     <color name="workspace_error">#B52F38</color>
     <color name="workspace_error_tint">#FDECEE</color>
+    <color name="login_hero">#0B302D</color>
+    <color name="login_page">#EEF3F3</color>
     <bool name="wide_workspace">false</bool>
-    <dimen name="workspace_gutter">16dp</dimen>
+    <dimen name="workspace_gutter">10dp</dimen>
     <style name="Widget.SuperKing.NavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator"><item name="android:color">@color/workspace_tint</item><item name="shapeAppearance">@style/Shape.SuperKing</item></style>
 </resources>

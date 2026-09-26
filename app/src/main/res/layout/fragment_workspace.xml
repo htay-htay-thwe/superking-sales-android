@@ -3,10 +3,14 @@
 <com.google.android.material.progressindicator.LinearProgressIndicator android:id="@+id/progress" android:layout_width="match_parent" android:layout_height="4dp" android:indeterminate="true" android:visibility="gone" android:contentDescription="@string/loading" />
 <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="@dimen/foundation_screen_padding" android:visibility="gone" android:accessibilityLiveRegion="polite" android:contentDescription="@string/error" android:textColor="?attr/colorOnErrorContainer" android:background="?attr/colorErrorContainer" />
 <com.google.android.material.button.MaterialButton android:id="@+id/retry" style="?attr/materialButtonOutlinedStyle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginHorizontal="@dimen/foundation_screen_padding" android:layout_marginTop="@dimen/foundation_space_2" android:text="@string/retry" android:visibility="gone" />
+<LinearLayout android:id="@+id/top_bar" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingHorizontal="@dimen/workspace_gutter" />
+<LinearLayout android:id="@+id/content_card" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="vertical">
 <LinearLayout android:id="@+id/controls" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingHorizontal="@dimen/workspace_gutter" />
 <androidx.core.widget.NestedScrollView android:id="@+id/form_scroll" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true" android:visibility="gone">
 <LinearLayout android:id="@+id/form" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingHorizontal="@dimen/workspace_gutter" android:paddingVertical="@dimen/foundation_space_2" />
 </androidx.core.widget.NestedScrollView>
 <androidx.recyclerview.widget.RecyclerView android:id="@+id/list" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:clipToPadding="false" android:paddingHorizontal="@dimen/workspace_gutter" android:paddingBottom="@dimen/foundation_space_3" />
+<LinearLayout android:id="@+id/step_actions" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingHorizontal="@dimen/workspace_gutter" android:paddingTop="@dimen/foundation_space_1" android:paddingBottom="@dimen/foundation_space_1" android:background="@color/workspace_surface" android:visibility="gone" />
+</LinearLayout>
 </LinearLayout>
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

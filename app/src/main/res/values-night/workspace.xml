@@ -15,4 +15,6 @@
     <color name="workspace_warning_tint">#3D321C</color>
     <color name="workspace_error">#FF858B</color>
     <color name="workspace_error_tint">#462428</color>
+    <color name="login_hero">#082724</color>
+    <color name="login_page">#101820</color>
 </resources>

@@ -18,7 +18,7 @@ class SalesFlowTest {
     @Before fun start() {
         app.seed()
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        awaitText("Hello, Test Representative")
+        awaitText("Route overview")
     }
     @After fun finish() { scenario.close() }
     private fun awaitText(text: String) {
@@ -34,11 +34,11 @@ class SalesFlowTest {
         scenario.onActivity { it.open(id, record) }
     }
     @Test fun mainTabsAndNativeNavigationLoad() {
-        onView(withId(R.id.trip)).perform(click())
+        open(R.id.trip)
         awaitText("Yangon route")
-        onView(withId(R.id.sales)).perform(click())
+        open(R.id.sales)
         awaitText("Sales activity")
-        onView(withId(R.id.cash)).perform(click())
+        open(R.id.cash)
         awaitText("Current hold")
         open(R.id.customers)
         awaitText("New customer")
@@ -47,7 +47,7 @@ class SalesFlowTest {
         Assert.assertTrue(app.requests.none { it.method != "GET" })
     }
     @Test fun saleWizardPreservesQuantityAcrossRecreationAndSavesDraft() {
-        onView(withId(R.id.new_sale)).perform(click())
+        open(R.id.new_sale)
         awaitText("Sale information")
         onView(withText("Continue")).perform(scrollTo(), click())
         awaitText("Step 2 of 4 · Products")
@@ -63,7 +63,7 @@ class SalesFlowTest {
         Assert.assertEquals(1, app.requests.count { it.method == "PUT" && it.path == "/public/api/sales/sales/44" })
     }
     @Test fun insufficientStockStaysOnQuantityStep() {
-        onView(withId(R.id.new_sale)).perform(click()); awaitText("Sale information")
+        open(R.id.new_sale); awaitText("Sale information")
         onView(withText("Continue")).perform(scrollTo(), click())
         onView(withText("Continue")).perform(click())
         awaitText("Quantities & offers")
@@ -88,8 +88,8 @@ class SalesFlowTest {
     @Test fun expiredSessionReturnsToSignIn() {
         app.unauthorized = true
         onView(withId(R.id.swipe_refresh)).perform(swipeDown())
-        awaitText("Super King")
-        onView(allOf(withText("Sign in"), isAssignableFrom(android.widget.Button::class.java))).check(matches(isDisplayed()))
+        awaitText("Route sign in")
+        onView(allOf(withText(startsWith("Sign in securely")), isAssignableFrom(android.widget.Button::class.java))).check(matches(isDisplayed()))
         Assert.assertNull(app.repository.user.value)
         Assert.assertNull(app.store.get("draft.7.sale.0"))
     }
@@ -117,7 +117,7 @@ class SalesFlowTest {
     @Test fun offlineSaveKeepsDraftAndSendsNoMutation() {
         app.networkAvailable = false
         try {
-            scenario.recreate(); awaitText("Hello, Test Representative")
+            scenario.recreate(); awaitText("Route overview")
             onView(withId(R.id.connection)).check(matches(isDisplayed()))
             open(R.id.new_sale); awaitText("Sale information")
             onView(withText("Continue")).perform(scrollTo(), click())
@@ -125,6 +125,8 @@ class SalesFlowTest {
             awaitText("Quantities & offers")
             onView(withText("Continue")).perform(scrollTo(), click())
             awaitText("Review & submit")
+            val deadline = System.currentTimeMillis() + 3000
+            while (app.store.get("draft.7.sale.0")?.contains("\"step\":4") != true && System.currentTimeMillis() < deadline) Thread.sleep(50)
             val draft = app.store.get("draft.7.sale.0")
             onView(withText("Save draft")).perform(scrollTo(), click())
             awaitText("Internet connection is required to complete this transaction.")

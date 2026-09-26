@@ -19,16 +19,15 @@ class SessionViewModel(private val repository: SalesRepository) : ViewModel() {
             catch (e: Exception) { _state.value = SessionState(false, e.message.orEmpty(), true) }
         }
     }
-    fun login(user: String, password: String) {
+    fun login(user: String, password: String, remember: Boolean = false) {
         if (_state.value.loading) return
         if (user.isBlank() || password.isBlank()) { _state.value = SessionState(false, "Enter your username and password."); return }
         _state.value = SessionState()
         viewModelScope.launch {
-            try { repository.login(user, password); _state.value = SessionState(false) }
+            try { repository.login(user, password, remember); _state.value = SessionState(false) }
             catch (e: ApiFailure) { _state.value = SessionState(false, e.fields.values.joinToString("\n").ifBlank { e.message }) }
             catch (e: Exception) { _state.value = SessionState(false, e.message.orEmpty()) }
         }
     }
     fun logout() = viewModelScope.launch { runCatching { repository.logout() } }
 }
-

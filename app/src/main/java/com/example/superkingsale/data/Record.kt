@@ -14,6 +14,11 @@ data class Record(private val source: JsonObject = JsonObject()) {
     fun obj(key: String): Record = Record(source[key]?.takeIf { it.isJsonObject }?.asJsonObject ?: JsonObject())
     fun rows(key: String): List<Record> = source[key]?.takeIf { it.isJsonArray }?.asJsonArray
         ?.filter { it.isJsonObject }?.map { Record(it.asJsonObject) } ?: emptyList()
+    fun regionRows(): List<Record> = rows("regions").ifEmpty {
+        obj("representative").rows("regions").ifEmpty {
+            obj("data").rows("regions").ifEmpty { obj("options").rows("regions") }
+        }
+    }
     fun strings(key: String): List<String> = source[key]?.takeIf { it.isJsonArray }?.asJsonArray
         ?.filter { it.isJsonPrimitive }?.map { it.asString } ?: emptyList()
     val id: Long get() = number("id")

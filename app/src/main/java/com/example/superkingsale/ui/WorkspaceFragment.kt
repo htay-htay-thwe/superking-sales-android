@@ -34,6 +34,7 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
     private var rendered = -1L
     private var notice = ""
     private var dialog: androidx.appcompat.app.AlertDialog? = null
+    private var cashSheet: com.google.android.material.bottomsheet.BottomSheetDialog? = null
     private var keepDialog = false
     private var dialogError: android.widget.TextView? = null
     private var dialogFields = mutableMapOf<String, com.google.android.material.textfield.TextInputEditText>()
@@ -43,6 +44,10 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
         if (vm.screen in listOf("home", "trip")) {
             val gutter = resources.getDimensionPixelSize(R.dimen.foundation_home_gutter)
             b.list.setPaddingRelative(gutter, b.list.paddingTop, gutter, b.list.paddingBottom)
+        }
+        if (vm.screen == "sale_detail") {
+            val navigationHeight = resources.getDimensionPixelSize(R.dimen.foundation_bottom_navigation)
+            b.list.setPaddingRelative(b.list.paddingLeft, b.list.paddingTop, b.list.paddingRight, b.list.paddingBottom + navigationHeight)
         }
         b.list.layoutManager = LinearLayoutManager(requireContext()); b.list.adapter = cards
         cards.controls = ::inlineControls
@@ -69,7 +74,7 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
                     b.list.enableChildren(!s.busy && !s.loading)
                     b.retry.isEnabled = !s.loading && !s.busy
                     if (s.notice.isNotBlank() && s.notice != notice) {
-                        notice = s.notice; dialog?.dismiss(); dialog = null
+                        notice = s.notice; dialog?.dismiss(); dialog = null; cashSheet?.dismiss(); cashSheet = null
                         Snackbar.make(b.root, requireContext().tr(s.notice), Snackbar.LENGTH_LONG).show()
                     }
                     if (s.navigation.isNotBlank()) {
@@ -88,7 +93,7 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
         }
     }
     override fun onResume() { super.onResume(); vm.refreshIfChanged() }
-    override fun onDestroyView() { keepDialog = true; dialog?.dismiss(); dialog = null; binding = null; super.onDestroyView() }
+    override fun onDestroyView() { keepDialog = true; dialog?.dismiss(); dialog = null; cashSheet?.dismiss(); cashSheet = null; binding = null; super.onDestroyView() }
     private fun open(dest: Int, id: Long = 0) = host.open(dest, id)
     private fun action(label: String, key: String, id: Long = 0) = CardAction(label, key, id)
     private fun record(): Record = vm.state.value.data.obj("data")
@@ -96,19 +101,121 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
         b.controls.removeAllViews()
         b.controls.isVisible = false
     }
-    private fun inlineControls(container: LinearLayout) {
-        container.surface()
-        if (vm.screen in listOf("stock", "sales", "customers")) {
-            val grid = container.grid(150, 2)
-            val search = grid.cell().field("Search", vm.saved["searchDraft"] ?: vm.query["search"].orEmpty()) { vm.saved["searchDraft"] = it }
-            search.filters = arrayOf(android.text.InputFilter.LengthFilter(100))
-            grid.cell().button(if (vm.screen == "sales") "Apply" else "Search") { vm.filter(vm.query + ("search" to search.text.toString())) }.outlined()
-            if (vm.screen == "sales") container.button("Filters") { filters() }.outlined()
+    private fun inlineControls(container: LinearLayout, key: String) {
+        if (key != "stock-search" && vm.screen != "customers") container.surface()
+        if (vm.screen == "cash" && (key.startsWith("cash-tabs-") || key.startsWith("cash-scope-"))) {
+            container.surface(tint = true, border = false)
+            container.setPadding(container.context.dp(4), container.context.dp(4), container.context.dp(4), container.context.dp(4))
+            val row = LinearLayout(requireContext()).apply { orientation = LinearLayout.HORIZONTAL }
+            container.addView(row, LinearLayout.LayoutParams(-1, requireContext().dp(40)))
+            val historyTabs = key.startsWith("cash-tabs-")
+            val values = if (historyTabs) listOf("returns" to "Cash returns", "ledger" to "Cash ledger")
+                else listOf("trip" to "This trip", "all" to "All history")
+            val selected = if (historyTabs) vm.tab else vm.scope
+            values.forEach { (value, label) ->
+                row.addView(com.google.android.material.button.MaterialButton(requireContext()).apply {
+                    text = context.tr(label); isAllCaps = false; textSize = 11f
+                    minHeight = context.dp(40); minimumHeight = context.dp(40)
+                    insetTop = 0; insetBottom = 0; cornerRadius = context.dp(5)
+                    if (historyTabs) {
+                        setIconResource(if (value == "returns") R.drawable.ic_cash else R.drawable.ic_sales)
+                        iconGravity = com.google.android.material.button.MaterialButton.ICON_GRAVITY_TEXT_START; iconPadding = context.dp(6)
+                    }
+                    outlined(); isSelected = selected == value
+                    if (isSelected) {
+                        backgroundTintList = android.content.res.ColorStateList.valueOf(context.ink(R.color.workspace_tint))
+                        strokeColor = android.content.res.ColorStateList.valueOf(context.ink(R.color.workspace_accent))
+                        iconTint = android.content.res.ColorStateList.valueOf(context.ink(R.color.workspace_accent))
+                        setTextColor(context.ink(R.color.workspace_accent))
+                    } else {
+                        iconTint = android.content.res.ColorStateList.valueOf(context.ink(R.color.workspace_muted))
+                        setTextColor(context.ink(R.color.workspace_muted))
+                    }
+                    setOnClickListener { if (historyTabs) vm.tab(value) else vm.scope(value) }
+                }, LinearLayout.LayoutParams(0, requireContext().dp(40), 1f))
+            }
+            return
         }
-        if (vm.screen == "stock") container.options("Stock view", listOf("stock" to "On hand", "pending" to "Pending receiving", "history" to "Issue history"), vm.tab, vm::tab)
-        if (vm.screen == "cash") {
-            container.options("Cash history", listOf("returns" to "Cash returns", "ledger" to "Cash ledger"), vm.tab, vm::tab)
-            if (vm.tab == "returns") container.options("Scope", listOf("trip" to "This trip", "all" to "All history"), vm.scope, vm::scope)
+        if (vm.screen == "stock" && key.startsWith("stock-tabs-")) {
+            container.setPadding(container.context.dp(4), container.context.dp(4), container.context.dp(4), container.context.dp(4))
+            val tabs = container.grid(125, 2).apply { (layoutParams as LinearLayout.LayoutParams).topMargin = 0 }
+            listOf("stock" to "Current stock", "history" to "Issue history").forEach { (tab, label) ->
+                val historyCount = vm.state.value.data.obj("meta").number("total").takeIf { vm.tab == "history" && it > 0 }
+                val text = if (tab == "history" && historyCount != null) "$label   $historyCount" else label
+                tabs.cell().button(text) { vm.tab(tab) }.apply {
+                    outlined(); layoutParams = (layoutParams as LinearLayout.LayoutParams).apply { height = context.dp(40); topMargin = 0; bottomMargin = 0 }
+                    setIconResource(if (tab == "stock") R.drawable.ic_stock else R.drawable.ic_sales)
+                    iconGravity = com.google.android.material.button.MaterialButton.ICON_GRAVITY_TEXT_START
+                    iconPadding = context.dp(8)
+                    isSelected = vm.tab == tab
+                    if (isSelected) {
+                        backgroundTintList = android.content.res.ColorStateList.valueOf(context.ink(R.color.workspace_tint))
+                        strokeColor = android.content.res.ColorStateList.valueOf(context.ink(R.color.workspace_accent))
+                        iconTint = android.content.res.ColorStateList.valueOf(context.ink(R.color.workspace_accent))
+                        setTextColor(context.ink(R.color.workspace_accent))
+                    } else {
+                        iconTint = android.content.res.ColorStateList.valueOf(context.ink(R.color.workspace_muted))
+                        setTextColor(context.ink(R.color.workspace_muted))
+                    }
+                }
+            }
+            return
+        }
+        if (vm.screen == "stock" && key == "stock-search") {
+            val row = LinearLayout(requireContext()).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.BOTTOM }
+            val fieldHost = LinearLayout(requireContext()).apply { orientation = LinearLayout.VERTICAL }
+            val search = fieldHost.field("Product name or SKU", vm.saved["searchDraft"] ?: vm.query["search"].orEmpty()) { vm.saved["searchDraft"] = it }
+            search.filters = arrayOf(android.text.InputFilter.LengthFilter(100))
+            search.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_search, 0, 0, 0)
+            search.compoundDrawablePadding = requireContext().dp(8)
+            row.addView(fieldHost, LinearLayout.LayoutParams(0, -2, 1f))
+            val actionHost = LinearLayout(requireContext()).apply { orientation = LinearLayout.VERTICAL }
+            actionHost.button("Search") { vm.filter(vm.query + ("search" to search.text.toString())) }.apply {
+                backgroundTintList = android.content.res.ColorStateList.valueOf(context.ink(R.color.workspace_accent))
+                setTextColor(context.ink(R.color.workspace_surface)); minWidth = 0; minimumWidth = 0
+                insetTop = 0; insetBottom = 0; cornerRadius = context.dp(6)
+                minHeight = context.dp(48); minimumHeight = context.dp(48)
+                layoutParams = (layoutParams as LinearLayout.LayoutParams).apply { topMargin = context.dp(8) }
+            }
+            row.addView(actionHost, LinearLayout.LayoutParams(requireContext().dp(82), -2).apply { marginStart = requireContext().dp(8) })
+            container.addView(row, LinearLayout.LayoutParams(-1, -2))
+            return
+        }
+        if (vm.screen == "customers") {
+            container.copyText("Search customers", 13f, true)
+            val search = container.field("Search code, name, phone, or township", vm.saved["searchDraft"] ?: vm.query["search"].orEmpty()) {
+                vm.saved["searchDraft"] = it
+            }
+            search.filters = arrayOf(android.text.InputFilter.LengthFilter(100))
+            search.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_search, 0, 0, 0)
+            search.compoundDrawablePadding = requireContext().dp(8)
+            search.isSingleLine = true
+            search.imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+            search.setOnEditorActionListener { _, actionId, _ ->
+                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+                    vm.filter(vm.query + ("search" to search.text.toString())); true
+                } else false
+            }
+            return
+        }
+        if (vm.screen in listOf("stock", "sales", "customers")) {
+            // Sales filters live inside the activity card, so use a compact phone-safe
+            // minimum while keeping the same two-column structure on tablets.
+            val filterCellWidth = if (vm.screen == "sales") 128 else 150
+            val fields = container.grid(filterCellWidth, 2)
+            val search = fields.cell().field(if (vm.screen == "sales") "Search sales" else "Search", vm.saved["searchDraft"] ?: vm.query["search"].orEmpty()) { vm.saved["searchDraft"] = it }
+            search.filters = arrayOf(android.text.InputFilter.LengthFilter(100))
+            if (vm.screen == "sales") {
+                var status = vm.query["status"].orEmpty()
+                fields.cell().choice("Status", listOf("" to "All statuses", "draft" to "Draft", "posted" to "Posted", "voided" to "Voided"), status) { status = it }
+                val actions = container.grid(filterCellWidth, 2)
+                actions.cell().button("More filters") { filters() }.outlined()
+                actions.cell().button("Apply") {
+                    vm.filter(vm.query + mapOf("search" to search.text.toString(), "status" to status))
+                }.apply { backgroundTintList = android.content.res.ColorStateList.valueOf(context.ink(R.color.workspace_accent)) }
+            } else {
+                fields.cell().button("Search") { vm.filter(vm.query + ("search" to search.text.toString())) }.outlined()
+            }
         }
     }
     private fun render(s: WorkspaceState) {
@@ -238,12 +345,14 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             if (vm.page < meta.number("last_page")) next += action("Next page", "next")
             items += Card("pages", "Page ${vm.page} of ${maxOf(1, meta.number("last_page"))}", detail = "${meta.number("total")} records", actions = next)
         }
-        cards.submitList(workspacePresentation(vm.screen, s, items, vm.tab))
-        if (dialog == null && vm.saved.get<String>("dialog").orEmpty().isNotBlank()) {
+        cards.submitList(workspacePresentation(vm.screen, s, items, vm.tab, vm.scope))
+        if (dialog == null && cashSheet == null && vm.saved.get<String>("dialog").orEmpty().isNotBlank()) {
             when (vm.saved.get<String>("dialog")) {
                 "Record trip expense" -> expense(vm.saved["dialogId"] ?: 0L)
                 "Return trip cash" -> submitCash()
                 "Cancel cash handover" -> cancelCash(vm.saved["dialogId"] ?: 0L)
+                "Change password" -> changePasswordSheet()
+                "New customer" -> newCustomerSheet()
                 "Collect customer credit" -> {
                     val id: Long = vm.saved["dialogId"] ?: 0L
                     if (s.data.rows("data").any { it.id == id }) collect(id)
@@ -287,12 +396,13 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             "cash" -> open(R.id.cash)
             "sales" -> open(R.id.sales)
             "customers" -> open(R.id.customers)
-            "customer_new" -> open(R.id.customer_new)
+            "customer_new" -> newCustomerSheet()
             "receiving" -> open(R.id.receiving, a.id)
             "sale_detail" -> open(R.id.sale_detail, a.id)
             "edit" -> open(R.id.new_sale, a.id)
             "next" -> { vm.page(vm.page + 1); b.list.scrollToPosition(0) }
             "previous" -> { vm.page(vm.page - 1); b.list.scrollToPosition(0) }
+            "stock_history" -> vm.tab("history")
             "receive" -> confirm("Receive all stock?", "Confirm that every product, paid quantity and FOC quantity matches the physical delivery.") {
                 vm.command("POST", "receivings/${a.id}/receive", notice = "Stock received.", destination = "home")
             }
@@ -320,7 +430,7 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             }
         }
     }
-    private fun formDialog(title: String, submit: String, build: (LinearLayout) -> (() -> Unit)) {
+    private fun formDialog(title: String, submit: String, bottomAligned: Boolean = false, build: (LinearLayout) -> (() -> Unit)) {
         if (!online()) return
         keepDialog = false
         vm.saved["dialog"] = title
@@ -337,6 +447,18 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             }
         }
         dialog?.show()
+        if (bottomAligned) dialog?.window?.apply {
+            val sheetHeight = (resources.displayMetrics.heightPixels * 0.78f).toInt()
+            attributes = attributes.apply {
+                gravity = android.view.Gravity.BOTTOM
+                width = android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                height = sheetHeight
+                horizontalMargin = 0f
+            }
+            decorView.setPadding(0, 0, 0, 0)
+            setWindowAnimations(com.google.android.material.R.style.Animation_Design_BottomSheetDialog)
+            setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, sheetHeight)
+        }
         dialog?.getButton(-1)?.isEnabled = !vm.state.value.busy
         dialog?.getButton(-2)?.isEnabled = !vm.state.value.busy
         dialog?.setCancelable(!vm.state.value.busy)
@@ -346,37 +468,378 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
         dialogFields[key] = edit
         return edit
     }
-    private fun expense(id: Long) = formDialog("Record trip expense", "Save expense") { form ->
+    private fun changePasswordSheet() {
+        if (!online() || cashSheet != null) return
+        keepDialog = false
+        vm.saved["dialog"] = "Change password"
+        val ui = requireContext()
+        val frame = ui.column().apply { setBackgroundColor(ui.ink(R.color.workspace_surface)) }
+        val header = ui.column(12)
+        val headerRow = LinearLayout(ui).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
+        headerRow.addView(ui.column().apply {
+            copyText("Change password", 20f)
+            copyText("Use a private password that you do not reuse elsewhere.", 12f, color = R.color.workspace_muted)
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        headerRow.addView(com.google.android.material.button.MaterialButton(ui, null, com.google.android.material.R.attr.materialIconButtonStyle).apply {
+            text = "×"; textSize = 26f; gravity = android.view.Gravity.CENTER; includeFontPadding = false
+            setPadding(0, 0, 0, 0); contentDescription = ui.tr("Close"); setOnClickListener { cashSheet?.dismiss() }
+        }, LinearLayout.LayoutParams(ui.dp(44), ui.dp(44)))
+        header.addView(headerRow); frame.addView(header)
+        frame.addView(View(ui).apply { setBackgroundColor(ui.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, ui.dp(1)))
+        val form = ui.column(16).apply { setBackgroundColor(ui.ink(R.color.workspace_surface)) }
+        dialogFields.clear(); dialogError = form.copyText("", 11f, color = R.color.workspace_error).apply { isVisible = false }
+        val passwordType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        val current = dialogField(form, "current_password", "Current password", type = passwordType)
+        val password = dialogField(form, "password", "New password", type = passwordType)
+        val confirm = dialogField(form, "password_confirmation", "Confirm password", type = passwordType)
+        frame.addView(ScrollView(ui).apply { addView(form) }, LinearLayout.LayoutParams(-1, -2))
+        val footer = ui.column(10).apply { setBackgroundColor(ui.ink(R.color.workspace_background)) }
+        footer.addView(View(ui).apply { setBackgroundColor(ui.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, ui.dp(1)))
+        val actions = footer.grid(140, 2)
+        actions.cell().button("Cancel") { cashSheet?.dismiss() }.outlined()
+        actions.cell().button("Update password") {
+            if (current.text.isNullOrBlank() || password.text.isNullOrBlank()) {
+                dialogError?.text = ui.tr("Enter your current and new password."); dialogError?.isVisible = true
+            } else if (password.text.toString() != confirm.text.toString()) {
+                dialogError?.text = ui.tr("Passwords do not match."); dialogError?.isVisible = true
+            } else vm.command("PUT", "profile/password", mapOf(
+                "current_password" to current.text.toString(), "password" to password.text.toString(),
+                "password_confirmation" to confirm.text.toString()), false, "Password updated.")
+        }.apply { backgroundTintList = android.content.res.ColorStateList.valueOf(ui.ink(R.color.workspace_accent)); setTextColor(ui.ink(R.color.workspace_surface)) }
+        frame.addView(footer)
+        cashSheet = com.google.android.material.bottomsheet.BottomSheetDialog(ui).apply {
+            setContentView(frame)
+            setOnShowListener {
+                findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
+                    sheet.layoutParams.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT; sheet.minimumHeight = 0; sheet.requestLayout()
+                    com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheet).apply {
+                        state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED; skipCollapsed = true; isDraggable = true
+                    }
+                }
+            }
+            setOnDismissListener {
+                cashSheet = null
+                if (!keepDialog) {
+                    vm.saved["dialog"] = ""
+                    vm.saved.keys().filter { it.startsWith("dialog.field.") }.forEach { vm.saved.remove<String>(it) }
+                }
+            }
+            show()
+        }
+    }
+    private fun newCustomerSheet() {
+        if (!online() || cashSheet != null) return
+        keepDialog = false
+        vm.saved["dialog"] = "New customer"
+        val ui = requireContext()
+        val frame = ui.column().apply { setBackgroundColor(ui.ink(R.color.workspace_surface)) }
+        val header = ui.column(12)
+        val headerRow = LinearLayout(ui).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
+        headerRow.addView(ui.column().apply {
+            copyText("New customer", 20f)
+            copyText("The customer is assigned to your warehouse. Credit is disabled and the credit limit starts at 0.", 12f, color = R.color.workspace_muted)
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        headerRow.addView(com.google.android.material.button.MaterialButton(ui, null, com.google.android.material.R.attr.materialIconButtonStyle).apply {
+            text = "×"; textSize = 26f; gravity = android.view.Gravity.CENTER; includeFontPadding = false
+            setPadding(0, 0, 0, 0); contentDescription = ui.tr("Close"); setOnClickListener { cashSheet?.dismiss() }
+        }, LinearLayout.LayoutParams(ui.dp(44), ui.dp(44)))
+        header.addView(headerRow); frame.addView(header)
+        frame.addView(View(ui).apply { setBackgroundColor(ui.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, ui.dp(1)))
+
+        val form = ui.column(16).apply { setBackgroundColor(ui.ink(R.color.workspace_surface)) }
+        dialogFields.clear(); dialogError = form.copyText("", 11f, color = R.color.workspace_error).apply { isVisible = false }
+        val name = dialogField(form, "name", "Customer name")
+        val customerType = dialogField(form, "customer_type", "Customer type", "Shop")
+        val phone = dialogField(form, "phone", "Phone", type = InputType.TYPE_CLASS_PHONE)
+        val regions = vm.state.value.options.regionRows()
+        var region: String = vm.saved["dialog.field.region"] ?: ""
+        form.choice("Region", listOf("" to "Select region") + regions.map { it.id.toString() to it.name }, region) {
+            region = it; vm.saved["dialog.field.region"] = it
+        }
+        val township = dialogField(form, "township", "Township")
+        val address = dialogField(form, "address", "Address")
+        val notes = dialogField(form, "notes", "Notes", type = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE)
+        frame.addView(androidx.core.widget.NestedScrollView(ui).apply {
+            isFillViewport = true; isNestedScrollingEnabled = true; addView(form)
+        }, LinearLayout.LayoutParams(-1, 0, 1f))
+
+        val footer = ui.column(10).apply { setBackgroundColor(ui.ink(R.color.workspace_background)) }
+        footer.addView(View(ui).apply { setBackgroundColor(ui.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, ui.dp(1)))
+        val actions = footer.grid(140, 2)
+        actions.cell().button("Cancel") { cashSheet?.dismiss() }.outlined()
+        actions.cell().button("Create customer") {
+            if (name.text.isNullOrBlank() || region.toLongOrNull() == null) {
+                dialogError?.text = ui.tr("Enter a name and region."); dialogError?.isVisible = true
+            } else vm.command("POST", "customers", mapOf(
+                "name" to name.text.toString(), "customer_type" to customerType.text.toString(),
+                "phone" to phone.text.toString(), "region_id" to region.toLong(),
+                "township" to township.text.toString(), "address" to address.text.toString(),
+                "notes" to notes.text.toString()), false, "Customer created.")
+        }.apply { backgroundTintList = android.content.res.ColorStateList.valueOf(ui.ink(R.color.workspace_accent)); setTextColor(ui.ink(R.color.workspace_surface)) }
+        frame.addView(footer)
+        cashSheet = com.google.android.material.bottomsheet.BottomSheetDialog(ui).apply {
+            setContentView(frame)
+            setOnShowListener { findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
+                sheet.layoutParams.height = (resources.displayMetrics.heightPixels * .9f).toInt(); sheet.requestLayout()
+                com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheet).apply {
+                    state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+                    skipCollapsed = true; isHideable = false; isDraggable = false
+                }
+            } }
+            setOnDismissListener {
+                cashSheet = null
+                if (!keepDialog) {
+                    vm.saved["dialog"] = ""
+                    vm.saved.keys().filter { it.startsWith("dialog.field.") }.forEach { vm.saved.remove<String>(it) }
+                }
+            }
+            show()
+        }
+    }
+    private fun showInfoSheet(title: String, message: String) {
+        if (cashSheet != null) return
+        val ui = requireContext()
+        val frame = ui.column().apply { setBackgroundColor(ui.ink(R.color.workspace_surface)) }
+        val header = ui.column(12)
+        val row = LinearLayout(ui).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
+        row.addView(ui.column().apply { copyText(title, 20f) }, LinearLayout.LayoutParams(0, -2, 1f))
+        row.addView(com.google.android.material.button.MaterialButton(ui, null, com.google.android.material.R.attr.materialIconButtonStyle).apply {
+            text = "×"; textSize = 26f; includeFontPadding = false; setPadding(0, 0, 0, 0); setOnClickListener { cashSheet?.dismiss() }
+        }, LinearLayout.LayoutParams(ui.dp(44), ui.dp(44)))
+        header.addView(row); frame.addView(header)
+        frame.addView(View(ui).apply { setBackgroundColor(ui.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, ui.dp(1)))
+        frame.addView(ui.column(16).apply { copyText(message, 13f, color = R.color.workspace_muted) })
+        frame.addView(ui.column(10).apply { button("Done") { cashSheet?.dismiss() } })
+        cashSheet = com.google.android.material.bottomsheet.BottomSheetDialog(ui).apply {
+            setContentView(frame)
+            setOnShowListener { findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
+                sheet.layoutParams.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheet).apply { state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED; skipCollapsed = true }
+            } }
+            setOnDismissListener { cashSheet = null }
+            show()
+        }
+    }
+    private fun expense(id: Long) {
+        if (!online() || cashSheet != null) return
+        keepDialog = false
         vm.saved["dialogId"] = id
-        form.label("Expenses are recorded in the trip ledger; they do not reduce cash held.")
-        val description = dialogField(form, "description", "Description"); val amount = dialogField(form, "amount", "Amount (MMK)", type = InputType.TYPE_CLASS_NUMBER)
-        val notes = dialogField(form, "notes", "Notes")
+        vm.saved["dialog"] = "Record trip expense"
+        val ui = requireContext()
+        val trip = vm.state.value.data.obj("data")
+        val frame = ui.column().apply { setBackgroundColor(context.ink(R.color.workspace_surface)) }
+        val header = ui.column(12).apply {
+            val line = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
+            line.addView(context.column().apply {
+                copyText("Record trip expense", 20f)
+                copyText("Add an operating expense to ${trip.text("reference")}.", 12f, color = R.color.workspace_muted)
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+            line.addView(com.google.android.material.button.MaterialButton(context, null, com.google.android.material.R.attr.materialIconButtonStyle).apply {
+                text = "×"; textSize = 26f; gravity = android.view.Gravity.CENTER; includeFontPadding = false
+                setPadding(0, 0, 0, 0); contentDescription = context.tr("Close"); setOnClickListener { cashSheet?.dismiss() }
+            }, LinearLayout.LayoutParams(context.dp(44), context.dp(44)))
+            addView(line)
+        }
+        frame.addView(header, LinearLayout.LayoutParams(-1, -2))
+        frame.addView(View(ui).apply { setBackgroundColor(context.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, ui.dp(1)))
+        val form = ui.column(16).apply { setBackgroundColor(context.ink(R.color.workspace_surface)) }
+        val notice = LinearLayout(ui).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(ui.dp(10), ui.dp(10), ui.dp(10), ui.dp(10)); background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = ui.dp(6).toFloat(); setColor(ui.ink(R.color.workspace_tint)); setStroke(ui.dp(1), ui.ink(R.color.workspace_accent))
+            }
+        }
+        notice.addView(android.widget.ImageView(ui).apply {
+            setImageResource(R.drawable.ic_sales); imageTintList = android.content.res.ColorStateList.valueOf(ui.ink(R.color.workspace_accent))
+        }, LinearLayout.LayoutParams(ui.dp(22), ui.dp(22)).apply { marginEnd = ui.dp(10) })
+        notice.addView(android.widget.TextView(ui).apply {
+            text = ui.tr("Expenses are recorded in the trip ledger; they do not reduce cash held."); textSize = 12f
+            setTextColor(ui.ink(R.color.workspace_primary))
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        form.addView(notice)
+        dialogFields.clear(); dialogError = form.copyText("", 11f, color = R.color.workspace_error).apply { isVisible = false }
+        val description = dialogField(form, "description", "Description")
+        val amount = dialogField(form, "amount", "Amount (MMK)", type = InputType.TYPE_CLASS_NUMBER)
+        val notes = dialogField(form, "notes", "Notes", type = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE)
         dialogFields.putAll(mapOf("description" to description, "amount" to amount, "notes" to notes))
-        val submit: () -> Unit = {
-            if (description.text.isNullOrBlank() || amount.text.toString().toLongOrNull()?.let { it > 0 } != true) dialogError?.text = requireContext().tr("Enter a description and a positive whole amount.")
+        frame.addView(ScrollView(ui).apply { addView(form) }, LinearLayout.LayoutParams(-1, -2))
+        val footer = ui.column(10).apply { setBackgroundColor(context.ink(R.color.workspace_background)) }
+        footer.addView(View(ui).apply { setBackgroundColor(context.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, ui.dp(1)))
+        val actions = footer.grid(140, 2)
+        actions.cell().button("Cancel") { cashSheet?.dismiss() }.outlined()
+        actions.cell().button("Save expense") {
+            if (description.text.isNullOrBlank() || amount.text.toString().toLongOrNull()?.let { it > 0 } != true) {
+                dialogError?.text = requireContext().tr("Enter a description and a positive whole amount."); dialogError?.isVisible = true
+            }
             else vm.command("POST", "trips/$id/expenses", mapOf("description" to description.text.toString(), "amount" to amount.text.toString().toLong(), "notes" to notes.text.toString()), false, "Expense recorded. Cash held is unchanged.")
-        }; submit
+        }.apply { backgroundTintList = android.content.res.ColorStateList.valueOf(context.ink(R.color.workspace_accent)); setTextColor(context.ink(R.color.workspace_surface)) }
+        frame.addView(footer, LinearLayout.LayoutParams(-1, -2))
+        cashSheet = com.google.android.material.bottomsheet.BottomSheetDialog(ui).apply {
+            setContentView(frame)
+            setOnShowListener {
+                findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
+                    sheet.layoutParams.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT; sheet.minimumHeight = 0; sheet.requestLayout()
+                    com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheet).apply {
+                        state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+                        skipCollapsed = true; isDraggable = true
+                    }
+                }
+            }
+            setOnDismissListener {
+                cashSheet = null
+                if (!keepDialog) {
+                    vm.saved["dialog"] = ""
+                    vm.saved.keys().filter { it.startsWith("dialog.field.") }.forEach { vm.saved.remove<String>(it) }
+                }
+            }
+            show()
+        }
     }
-    private fun submitCash() = formDialog("Return trip cash", "Submit for confirmation") { form ->
+    private fun submitCash() {
+        if (!online() || cashSheet != null) return
+        keepDialog = false
+        vm.saved["dialog"] = "Return trip cash"
         val available = vm.state.value.options.number("available_to_submit")
-        form.label("Available: ${money(available)}\nLinked to the current trip. The office must confirm the handover.")
+        val trip = vm.state.value.extra
+        val ui = requireContext()
+        val frame = ui.column().apply { setBackgroundColor(context.ink(R.color.workspace_surface)) }
+        val header = ui.column(12).apply {
+            val line = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
+            line.addView(context.column().apply {
+                copyText("Return trip cash", 20f)
+                copyText("Return cash for ${trip.text("reference")}. The balance changes only after office confirmation.", 12f, color = R.color.workspace_muted)
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+            line.addView(com.google.android.material.button.MaterialButton(context, null, com.google.android.material.R.attr.materialIconButtonStyle).apply {
+                text = "×"; textSize = 26f; gravity = android.view.Gravity.CENTER; includeFontPadding = false
+                setPadding(0, 0, 0, 0); contentDescription = context.tr("Close")
+                setOnClickListener { cashSheet?.dismiss() }
+            }, LinearLayout.LayoutParams(context.dp(44), context.dp(44)))
+            addView(line)
+        }
+        frame.addView(header, LinearLayout.LayoutParams(-1, -2))
+        frame.addView(View(ui).apply { setBackgroundColor(context.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, ui.dp(1)))
+        val form = ui.column(16).apply { setBackgroundColor(context.ink(R.color.workspace_surface)) }
+        val linkedTrip = LinearLayout(ui).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(ui.dp(10), ui.dp(10), ui.dp(10), ui.dp(10)); background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = ui.dp(6).toFloat(); setColor(ui.ink(R.color.workspace_tint)); setStroke(ui.dp(1), ui.ink(R.color.workspace_accent))
+            }
+        }
+        linkedTrip.addView(android.widget.ImageView(ui).apply {
+            setImageResource(R.drawable.ic_trip)
+            imageTintList = android.content.res.ColorStateList.valueOf(ui.ink(R.color.workspace_accent))
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, LinearLayout.LayoutParams(ui.dp(22), ui.dp(22)).apply { marginEnd = ui.dp(10) })
+        linkedTrip.addView(android.widget.TextView(ui).apply {
+            text = ui.tr("Automatically linked to ${trip.text("reference")} and ${trip.obj("warehouse").name}.")
+            textSize = 12f; setTextColor(ui.ink(R.color.workspace_primary))
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        form.addView(linkedTrip, LinearLayout.LayoutParams(-1, -2))
+        dialogFields.clear(); dialogError = form.copyText("", 11f, color = R.color.workspace_error).apply { isVisible = false }
         val amount = dialogField(form, "amount", "Amount (MMK)", available.toString(), InputType.TYPE_CLASS_NUMBER)
-        val notes = dialogField(form, "notes", "Handover note")
+        form.copyText("Pending handovers reserve the available amount.", 11f, color = R.color.workspace_muted)
+        val notes = dialogField(form, "notes", "Handover note", type = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE)
         dialogFields.putAll(mapOf("amount" to amount, "notes" to notes))
-        val submit: () -> Unit = {
+        frame.addView(ScrollView(ui).apply { addView(form) }, LinearLayout.LayoutParams(-1, -2))
+        val footer = ui.column(10).apply { setBackgroundColor(context.ink(R.color.workspace_background)) }
+        footer.addView(View(ui).apply { setBackgroundColor(context.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, ui.dp(1)))
+        val actions = footer.grid(140, 2)
+        actions.cell().button("Cancel") { cashSheet?.dismiss() }.outlined()
+        actions.cell().button("Submit for confirmation") {
             val value = amount.text.toString().toLongOrNull()
-            if (value == null || value <= 0 || value > available) dialogError?.text = requireContext().tr("Enter an amount from 1 to $available.")
+            if (value == null || value <= 0 || value > available) {
+                dialogError?.text = requireContext().tr("Enter an amount from 1 to $available."); dialogError?.isVisible = true
+            }
             else vm.command("POST", "cash-submissions", mapOf("amount" to value, "notes" to notes.text.toString()), notice = "Cash handover awaits office confirmation.")
-        }; submit
+        }.apply { backgroundTintList = android.content.res.ColorStateList.valueOf(context.ink(R.color.workspace_accent)); setTextColor(context.ink(R.color.workspace_surface)) }
+        frame.addView(footer, LinearLayout.LayoutParams(-1, -2))
+        cashSheet = com.google.android.material.bottomsheet.BottomSheetDialog(ui).apply {
+            setContentView(frame)
+            setOnShowListener {
+                findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
+                    sheet.layoutParams.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                    sheet.minimumHeight = 0
+                    sheet.requestLayout()
+                    com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheet).apply {
+                        state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+                        skipCollapsed = true; isDraggable = true
+                    }
+                }
+            }
+            setOnDismissListener {
+                cashSheet = null
+                if (!keepDialog) {
+                    vm.saved["dialog"] = ""
+                    vm.saved.keys().filter { it.startsWith("dialog.field.") }.forEach { vm.saved.remove<String>(it) }
+                }
+            }
+            show()
+        }
     }
-    private fun cancelCash(id: Long) = formDialog("Cancel cash handover", "Cancel handover") { form ->
+    private fun cancelCash(id: Long) {
+        if (!online() || cashSheet != null) return
+        keepDialog = false
         vm.saved["dialogId"] = id
+        vm.saved["dialog"] = "Cancel cash handover"
+        val ui = requireContext()
+        val record = vm.state.value.data.rows("data").find { it.id == id }
+        val frame = ui.column().apply { setBackgroundColor(context.ink(R.color.workspace_surface)) }
+        val header = ui.column(12).apply {
+            val line = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
+            line.addView(context.column().apply {
+                copyText("Cancel cash handover", 20f)
+                copyText("Cancel ${record?.text("reference").orEmpty()}. The amount will remain in your cash hold.", 12f, color = R.color.workspace_muted)
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+            line.addView(com.google.android.material.button.MaterialButton(context, null, com.google.android.material.R.attr.materialIconButtonStyle).apply {
+                text = "×"; textSize = 26f; gravity = android.view.Gravity.CENTER; includeFontPadding = false
+                setPadding(0, 0, 0, 0); contentDescription = context.tr("Close")
+                setOnClickListener { cashSheet?.dismiss() }
+            }, LinearLayout.LayoutParams(context.dp(44), context.dp(44)))
+            addView(line)
+        }
+        frame.addView(header, LinearLayout.LayoutParams(-1, -2))
+        frame.addView(View(ui).apply { setBackgroundColor(context.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, ui.dp(1)))
+        val form = ui.column(16).apply { setBackgroundColor(context.ink(R.color.workspace_surface)) }
+        form.copyText("This only cancels the pending handover. No cash balance is removed.", 12f, color = R.color.workspace_error).apply {
+            setPadding(ui.dp(12), ui.dp(12), ui.dp(12), ui.dp(12)); background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = ui.dp(6).toFloat(); setColor(ui.ink(R.color.workspace_error_tint)); setStroke(ui.dp(1), ui.ink(R.color.workspace_error))
+            }
+        }
+        dialogFields.clear(); dialogError = form.copyText("", 11f, color = R.color.workspace_error).apply { isVisible = false }
         val reason = dialogField(form, "reason", "Cancellation reason")
         dialogFields["reason"] = reason
-        val submit: () -> Unit = {
-            if (reason.text.isNullOrBlank()) dialogError?.text = requireContext().tr("Enter a reason.")
+        frame.addView(ScrollView(ui).apply { addView(form) }, LinearLayout.LayoutParams(-1, -2))
+        val footer = ui.column(10).apply { setBackgroundColor(context.ink(R.color.workspace_background)) }
+        footer.addView(View(ui).apply { setBackgroundColor(context.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, ui.dp(1)))
+        val actions = footer.grid(140, 2)
+        actions.cell().button("Keep handover") { cashSheet?.dismiss() }.outlined()
+        actions.cell().button("Cancel handover") {
+            if (reason.text.isNullOrBlank()) {
+                dialogError?.text = requireContext().tr("Enter a reason."); dialogError?.isVisible = true
+            }
             else vm.command("POST", "cash-submissions/$id/cancel", mapOf("reason" to reason.text.toString()), notice = "Handover cancelled. Cash hold is unchanged.")
-        }; submit
+        }.apply { backgroundTintList = android.content.res.ColorStateList.valueOf(context.ink(R.color.workspace_error)); setTextColor(context.ink(R.color.workspace_surface)) }
+        frame.addView(footer, LinearLayout.LayoutParams(-1, -2))
+        cashSheet = com.google.android.material.bottomsheet.BottomSheetDialog(ui).apply {
+            setContentView(frame)
+            setOnShowListener {
+                findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
+                    sheet.layoutParams.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT; sheet.minimumHeight = 0; sheet.requestLayout()
+                    com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheet).apply {
+                        state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+                        skipCollapsed = true; isDraggable = true
+                    }
+                }
+            }
+            setOnDismissListener {
+                cashSheet = null
+                if (!keepDialog) {
+                    vm.saved["dialog"] = ""
+                    vm.saved.keys().filter { it.startsWith("dialog.field.") }.forEach { vm.saved.remove<String>(it) }
+                }
+            }
+            show()
+        }
     }
     private fun collect(id: Long) = formDialog("Collect customer credit", "Record collection") { form ->
         vm.saved["dialogId"] = id
@@ -482,9 +945,9 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             }
             field("name", "Customer name"); field("customer_type", "Customer type", "Shop")
             field("phone", "Phone", type = InputType.TYPE_CLASS_PHONE)
-            val regions = s.data.rows("regions")
-            var region: String = vm.saved["form.region"] ?: regions.firstOrNull()?.id?.toString().orEmpty()
-            fieldsGrid.cell().choice("Region", regions.map { it.id.toString() to it.name }, region) { region = it; vm.saved["form.region"] = it }
+            val regions = s.data.regionRows()
+            var region: String = vm.saved["form.region"] ?: ""
+            fieldsGrid.cell().choice("Region", listOf("" to "Select region") + regions.map { it.id.toString() to it.name }, region) { region = it; vm.saved["form.region"] = it }
             field("township", "Township"); field("address", "Address"); field("notes", "Notes", type = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE)
             val actions = panel.grid(160, 2)
             actions.cell().button("Cancel") { findNavController().popBackStack() }.outlined()
@@ -495,8 +958,46 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             }
         } else {
             val r = s.data.obj("representative"); val account = r.obj("account")
+            b.form.copyText("‹  Dashboard", 13f, true, R.color.workspace_muted).apply {
+                setPadding(0, requireContext().dp(8), 0, requireContext().dp(14)); isClickable = true; isFocusable = true
+                setOnClickListener { findNavController().popBackStack() }
+            }
             b.form.eyebrow("ACCOUNT SETTINGS")
-            b.form.heading("Profile & security", "${r.name} · ${r.text("code")} · ${r.obj("primary_warehouse").name}")
+            b.form.heading("Profile & security", "Keep your personal information and login credentials current.")
+            b.form.addView(requireContext().column().apply { statusBadge("Active · ${r.text("code")}") }, LinearLayout.LayoutParams(-2, -2).apply {
+                topMargin = requireContext().dp(8); bottomMargin = requireContext().dp(10)
+            })
+            val prefs = requireContext().getSharedPreferences("appearance", android.content.Context.MODE_PRIVATE)
+            val display = b.form.panel("Display", "DEVICE PREFERENCE")
+            val fontCard = requireContext().column(12).apply { surface(tint = true, border = true) }
+            display.addView(fontCard, LinearLayout.LayoutParams(-1, -2).apply { topMargin = requireContext().dp(8) })
+            val fontHeading = LinearLayout(requireContext()).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.TOP }
+            fontHeading.addView(requireContext().column().apply {
+                copyText("Application font size", 15f, true)
+                copyText("Saved only on this device and applied to both applications.", 12f, color = R.color.workspace_muted)
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+            val currentScale = prefs.getFloat("fontScale", 1f).coerceIn(1f, 1.5f)
+            val scaleCopy = requireContext().column().apply { gravity = android.view.Gravity.END }
+            val percent = scaleCopy.copyText("${((currentScale - 1f) * 200).toInt()}%", 15f, true, R.color.workspace_primary).apply { gravity = android.view.Gravity.END }
+            val multiplier = scaleCopy.copyText(String.format(java.util.Locale.US, "%.2g×", currentScale), 12f, true, R.color.workspace_muted).apply { gravity = android.view.Gravity.END }
+            fontHeading.addView(scaleCopy, LinearLayout.LayoutParams(-2, -2).apply { marginStart = requireContext().dp(8) })
+            fontCard.addView(fontHeading)
+            val slider = android.widget.SeekBar(requireContext()).apply { max = 100; progress = ((currentScale - 1f) * 200).toInt() }
+            fontCard.addView(slider, LinearLayout.LayoutParams(-1, -2).apply { topMargin = requireContext().dp(8) })
+            val range = LinearLayout(requireContext()).apply { orientation = LinearLayout.HORIZONTAL }
+            range.addView(android.widget.TextView(requireContext()).apply { text = requireContext().tr("Default · 0%"); textSize = 11f; setTextColor(context.ink(R.color.workspace_muted)) }, LinearLayout.LayoutParams(0, -2, 1f))
+            range.addView(android.widget.TextView(requireContext()).apply { text = requireContext().tr("100% · 1.5×"); textSize = 11f; gravity = android.view.Gravity.END; setTextColor(context.ink(R.color.workspace_muted)) }, LinearLayout.LayoutParams(0, -2, 1f))
+            fontCard.addView(range)
+            slider.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: android.widget.SeekBar?, value: Int, fromUser: Boolean) {
+                    val scale = 1f + value / 200f; percent.text = "$value%"; multiplier.text = String.format(java.util.Locale.US, "%.2g×", scale)
+                }
+                override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {
+                    val scale = 1f + (seekBar?.progress ?: 0) / 200f
+                    prefs.edit().putFloat("fontScale", scale).apply(); requireActivity().recreate()
+                }
+            })
             val columns = b.form.grid(350, 2)
             val personal = columns.cell().panel("Personal profile", "REPRESENTATIVE ACCOUNT")
             val security = columns.cell().panel("Password & security", "ACCOUNT ACCESS")
@@ -509,49 +1010,18 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
                 fields[key] = personalFields.cell().field(title, vm.saved["profile.$key"] ?: initial) { vm.saved["profile.$key"] = it }
             }
             personal.button("Save profile") { if (online()) vm.command("PUT", "profile", fields.mapValues { it.value.text.toString() }, false, "Profile updated.") }
-            security.button("Change password") {
-                formDialog("Change password", "Update password") { form ->
-                    val passwordType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-                    val current = form.field("Current password", type = passwordType)
-                    val password = form.field("New password", type = passwordType)
-                    val confirm = form.field("Confirm password", type = passwordType)
-                    dialogFields.putAll(mapOf("current_password" to current, "password" to password, "password_confirmation" to confirm))
-                    val submit: () -> Unit = {
-                        if (password.text.toString() != confirm.text.toString()) dialogError?.text = requireContext().tr("Passwords do not match.")
-                        else vm.command("PUT", "profile/password", mapOf("current_password" to current.text.toString(), "password" to password.text.toString(), "password_confirmation" to confirm.text.toString()), false, "Password updated.")
-                    }; submit
-                }
-            }
-            val display = b.form.panel("Display preferences", "YOUR WORKSPACE")
-            val displayGrid = display.grid()
+            security.button("Change password") { changePasswordSheet() }
             val devices = b.form.panel("Display & printing", "DEVICE SETTINGS")
             devices.button("Thermal printer / PDF") { com.example.superkingsale.printing.ThermalPrintDialog.forSale(userId = host.repository.user.value?.id ?: 0).show(parentFragmentManager, "thermal") }
             devices.button("Test device GPS") {
                 locationCapture.start { fix ->
-                    MaterialAlertDialogBuilder(requireContext()).setTitle("GPS diagnostic")
-                        .setMessage(locationCapture.describe(fix) + "\n\n" + requireContext().tr("Diagnostic only. No sale or server record was created."))
-                        .setPositiveButton("OK", null).show()
+                    showInfoSheet("GPS diagnostic", locationCapture.describe(fix) + "\n\n" + requireContext().tr("Diagnostic only. No sale or server record was created."))
                 }
-            }
-            val prefs = requireContext().getSharedPreferences("appearance", android.content.Context.MODE_PRIVATE)
-            displayGrid.cell().choice("Theme", listOf("-1" to "System", "1" to "Light", "2" to "Dark"), prefs.getInt("theme", -1).toString()) {
-                prefs.edit().putInt("theme", it.toInt()).apply(); androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(it.toInt())
-            }
-            displayGrid.cell().choice("Text size", listOf("1.0" to "System default", "1.15" to "Large", "1.3" to "Extra large"), prefs.getFloat("fontScale", 1f).toString()) {
-                prefs.edit().putFloat("fontScale", it.toFloat()).apply(); requireActivity().recreate()
-            }
-            displayGrid.cell().choice("Density", listOf("comfortable" to "Comfortable", "compact" to "Compact"), prefs.getString("density", "comfortable").orEmpty()) {
-                prefs.edit().putString("density", it).apply(); requireActivity().recreate()
-            }
-            displayGrid.cell().choice("Language", listOf("en" to "English", "my" to "မြန်မာ"), prefs.getString("language", "en").orEmpty()) {
-                prefs.edit().putString("language", it).apply(); requireActivity().recreate()
             }
             val paperKey = "paper.${host.repository.user.value?.id}"
             devices.choice("Invoice paper", listOf("a4" to "A4", "a5" to "A5", "80mm" to "80 mm", "58mm" to "58 mm", "50mm" to "50 mm"), prefs.getString(paperKey, "a4").orEmpty()) { prefs.edit().putString(paperKey, it).apply() }
             devices.label("Printing uses Android's print service. Choose a printer or save the invoice as PDF.")
             devices.label("Thermal sizes require a compatible print service. Check the paper size in Android's preview; unsupported sizes may fall back to Letter or A4.")
-            b.form.removeView(display)
-            b.form.addView(display, b.form.indexOfChild(columns))
         }
     }
 }

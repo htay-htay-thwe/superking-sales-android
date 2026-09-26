@@ -47,7 +47,10 @@ class WorkspaceViewModel(
                     "trip" -> repo.get("current-trip")
                     "stock" -> coroutineScope {
                         val inventory = async { repo.get(when(tab) { "pending" -> "receivings"; "history" -> "receiving-history"; else -> "stock" }, params) }
-                        if (tab == "stock") extra = repo.get("receivings", mapOf("per_page" to "10"))
+                        val pending = async { repo.get("receivings", mapOf("per_page" to "10")) }
+                        val summary = if (tab == "stock") null else async { repo.get("stock", mapOf("per_page" to "10")) }
+                        extra = pending.await()
+                        options = summary?.await() ?: Record()
                         inventory.await()
                     }
                     "receiving" -> repo.get("receivings/$id")

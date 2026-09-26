@@ -34,10 +34,10 @@ class SalesRepository(private val store: PrivateStore, baseUrl: String = "https:
             else throw e
         }
     }
-    suspend fun login(login: String, password: String) = withContext(Dispatchers.IO) {
+    suspend fun login(login: String, password: String, remember: Boolean = false) = withContext(Dispatchers.IO) {
         transport.csrf()
         val response = transport.send("POST", "api/auth/login",
-            mapOf("login" to login.trim(), "password" to password, "portal" to "sales", "remember" to true))
+            mapOf("login" to login.trim(), "password" to password, "portal" to "sales", "remember" to remember))
         accept(response.obj("user"))
     }
     private fun accept(user: Record) {

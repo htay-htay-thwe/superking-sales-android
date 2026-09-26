@@ -200,4 +200,18 @@ class SaleViewModel(private val repo: SalesRepository, private val saved: SavedS
             persist()
         } catch (e: Exception) { error(e.message.orEmpty()) }
     }
+    fun createCustomer(body: Map<String, Any?>) {
+        if (_state.value.busy || _state.value.loading) return
+        _state.update { it.copy(busy = true, error = "", fields = emptyMap()) }
+        viewModelScope.launch {
+            try {
+                val created = repo.command("POST", "customers", body, false).obj("customer")
+                val options = repo.get("sale-options")
+                _state.update { it.copy(busy = false, options = options,
+                    draft = it.draft.copy(customerId = created.id, paymentType = "cash"), version = it.version + 1) }
+                persist()
+            } catch (e: ApiFailure) { _state.update { it.copy(busy = false, error = e.message, fields = e.fields) } }
+            catch (e: Exception) { _state.update { it.copy(busy = false, error = e.message.orEmpty()) } }
+        }
+    }
 }

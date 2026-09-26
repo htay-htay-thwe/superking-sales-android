@@ -14,7 +14,7 @@ open class SalesApplication : Application() {
     }
     override fun onCreate() {
         super.onCreate()
-        val theme = getSharedPreferences("appearance", MODE_PRIVATE).getInt("theme", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+        val theme = getSharedPreferences("appearance", MODE_PRIVATE).getInt("theme", AppCompatDelegate.MODE_NIGHT_NO)
         AppCompatDelegate.setDefaultNightMode(theme)
     }
 }

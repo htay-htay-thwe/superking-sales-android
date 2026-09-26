@@ -75,6 +75,8 @@ class ForegroundLocationCapture(private val fragment: Fragment) : DefaultLifecyc
         }
         if (providers.isEmpty()) { callback = null; settings("Turn on device location, then try again.", false); return }
         best = null
+        providers.mapNotNull { provider -> runCatching { service.getLastKnownLocation(provider) }.getOrNull() }
+            .filter(::usable).minByOrNull { it.accuracy }?.let { deliver(it); return }
         dialog = LocalizedDialogBuilder(context).setTitle("Getting current location…")
             .setMessage("Move outdoors or near a window. Keep this screen open; acquisition can take up to 45 seconds.")
             .setNegativeButton("Cancel") { _, _ -> cancel() }.setOnCancelListener { cancel() }.show()
@@ -82,8 +84,8 @@ class ForegroundLocationCapture(private val fragment: Fragment) : DefaultLifecyc
             override fun onLocationChanged(location: Location) {
                 if (!usable(location) || callback == null) return
                 if (best == null || !usable(best!!) || location.accuracy <= best!!.accuracy) best = Location(location)
-                if (fine && best!!.accuracy <= FixQuality.PREFERRED_ACCURACY_METERS) deliver(best!!)
-                else if (!fine) confirmApproximate(best!!)
+                // Accuracy is recorded with the sale; do not make the user wait for an arbitrary GPS threshold.
+                deliver(best!!)
             }
             @Deprecated("Platform compatibility") override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
             override fun onProviderEnabled(provider: String) {}
