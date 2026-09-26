@@ -496,6 +496,7 @@ class SaleFragment : Fragment(R.layout.fragment_workspace) {
             setContentView(frame)
             setOnShowListener {
                 findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
+                    sheet.fitTabletBottomSheet()
                     sheet.layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
                     sheet.minimumHeight = 0
                     sheet.requestLayout()

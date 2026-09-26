@@ -14,13 +14,16 @@
         <com.google.android.material.button.MaterialButton android:id="@+id/account_menu" style="@style/Widget.Material3.Button.TextButton" android:layout_width="48dp" android:layout_height="48dp" android:padding="0dp" android:minWidth="48dp" android:text="SK" app:cornerRadius="24dp" app:backgroundTint="@color/workspace_tint" android:textColor="@color/workspace_primary" android:contentDescription="Account menu" />
     </LinearLayout>
 </LinearLayout>
-<HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:scrollbars="none" android:background="@color/workspace_background">
-<LinearLayout android:id="@+id/wide_nav" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingHorizontal="@dimen/foundation_nav_padding" android:visibility="gone" />
-</HorizontalScrollView>
 <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/workspace_line" />
 <TextView android:id="@+id/connection" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="@dimen/foundation_screen_padding" android:visibility="gone" android:background="?attr/colorErrorContainer" android:textColor="?attr/colorOnErrorContainer" android:text="@string/offline" />
-<androidx.fragment.app.FragmentContainerView android:id="@+id/nav_host" android:name="androidx.navigation.fragment.NavHostFragment" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" app:defaultNavHost="true" app:navGraph="@navigation/main_navigation" />
-<androidx.compose.ui.platform.ComposeView android:id="@+id/adaptive_nav" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="@dimen/foundation_bottom_navigation" />
+<LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+    <LinearLayout android:id="@+id/wide_nav" android:layout_width="@dimen/foundation_tablet_nav_width" android:layout_height="match_parent" android:orientation="vertical" android:gravity="top|center_horizontal" android:paddingHorizontal="8dp" android:paddingTop="16dp" android:background="@color/workspace_background" android:visibility="gone" />
+    <View android:id="@+id/wide_nav_divider" android:layout_width="1dp" android:layout_height="match_parent" android:background="@color/workspace_line" android:visibility="gone" />
+    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+        <androidx.fragment.app.FragmentContainerView android:id="@+id/nav_host" android:name="androidx.navigation.fragment.NavHostFragment" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" app:defaultNavHost="true" app:navGraph="@navigation/main_navigation" />
+        <androidx.compose.ui.platform.ComposeView android:id="@+id/adaptive_nav" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="@dimen/foundation_bottom_navigation" />
+    </LinearLayout>
+</LinearLayout>
 <com.google.android.material.bottomnavigation.BottomNavigationView android:id="@+id/bottom_nav" android:layout_width="match_parent" android:layout_height="0dp" android:visibility="gone" app:menu="@menu/bottom_navigation" />
 </com.example.superkingsale.ui.WorkspaceColumn>
 </FrameLayout>

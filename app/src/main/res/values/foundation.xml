@@ -13,6 +13,7 @@
     <dimen name="foundation_touch_target">48dp</dimen>
     <dimen name="foundation_panel_radius">6dp</dimen>
     <dimen name="foundation_content_max">1120dp</dimen>
+    <dimen name="foundation_tablet_nav_width">0dp</dimen>
     <dimen name="foundation_text_title">18sp</dimen>
     <dimen name="foundation_text_section">16sp</dimen>
     <dimen name="foundation_text_body">12sp</dimen>

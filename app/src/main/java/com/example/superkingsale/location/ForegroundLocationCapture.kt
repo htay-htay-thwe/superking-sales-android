@@ -67,7 +67,9 @@ class ForegroundLocationCapture(private val fragment: Fragment) : DefaultLifecyc
     private fun acquire() {
         if (callback == null || !fragment.isAdded) return
         dialog?.dismiss()
-        val fine = granted(Manifest.permission.ACCESS_FINE_LOCATION)
+        val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!fine && !coarse) { callback = null; settings("Location permission is required.", true); return }
         val service = context.getSystemService(LocationManager::class.java)
         manager = service
         val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER).filter {

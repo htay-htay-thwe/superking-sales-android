@@ -511,6 +511,7 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             setContentView(frame)
             setOnShowListener {
                 findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
+                    sheet.fitTabletBottomSheet()
                     sheet.layoutParams.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT; sheet.minimumHeight = 0; sheet.requestLayout()
                     com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheet).apply {
                         state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED; skipCollapsed = true; isDraggable = true
@@ -580,6 +581,7 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
         cashSheet = com.google.android.material.bottomsheet.BottomSheetDialog(ui).apply {
             setContentView(frame)
             setOnShowListener { findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
+                sheet.fitTabletBottomSheet()
                 sheet.layoutParams.height = (resources.displayMetrics.heightPixels * .9f).toInt(); sheet.requestLayout()
                 com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheet).apply {
                     state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
@@ -613,6 +615,7 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
         cashSheet = com.google.android.material.bottomsheet.BottomSheetDialog(ui).apply {
             setContentView(frame)
             setOnShowListener { findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
+                sheet.fitTabletBottomSheet()
                 sheet.layoutParams.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
                 com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheet).apply { state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED; skipCollapsed = true }
             } }
@@ -678,6 +681,7 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             setContentView(frame)
             setOnShowListener {
                 findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
+                    sheet.fitTabletBottomSheet()
                     sheet.layoutParams.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT; sheet.minimumHeight = 0; sheet.requestLayout()
                     com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheet).apply {
                         state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
@@ -757,6 +761,7 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             setContentView(frame)
             setOnShowListener {
                 findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
+                    sheet.fitTabletBottomSheet()
                     sheet.layoutParams.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
                     sheet.minimumHeight = 0
                     sheet.requestLayout()
@@ -824,6 +829,7 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             setContentView(frame)
             setOnShowListener {
                 findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
+                    sheet.fitTabletBottomSheet()
                     sheet.layoutParams.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT; sheet.minimumHeight = 0; sheet.requestLayout()
                     com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheet).apply {
                         state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED

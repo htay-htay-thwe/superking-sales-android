@@ -152,6 +152,7 @@ class MainActivity : AppCompatActivity() {
             binding.bottomNav.isVisible = false
             binding.adaptiveNav.isVisible = !login && !wide && !typing
             binding.wideNav.isVisible = !login && wide && !typing
+            binding.wideNavDivider.isVisible = !login && wide && !typing
             binding.toolbar.isVisible = !login && !(typing && resources.configuration.screenHeightDp < 600)
             insets
         }
@@ -167,13 +168,17 @@ class MainActivity : AppCompatActivity() {
         binding.accountName.isVisible = wide
         if (wide) {
             binding.bottomNav.menu.clear()
+            val expandedRail = resources.configuration.screenWidthDp >= 840
             listOf(R.id.home to "Home", R.id.trip to "Trip", R.id.stock to "My stock", R.id.new_sale to "New sale", R.id.sales to "Sales", R.id.cash to "Cash").forEach { (destination, label) ->
                 binding.wideNav.addView(com.google.android.material.button.MaterialButton(this).apply {
-                    id = destination; text = tr(label); isAllCaps = false; textSize = 12f; minWidth = 0
-                    setPadding(dp(12), 0, dp(12), 0); cornerRadius = dp(6)
+                    id = destination; text = tr(label); isAllCaps = false; textSize = 11f; minWidth = 0
+                    minHeight = dp(if (expandedRail) 52 else 68); minimumHeight = minHeight
+                    setPadding(dp(if (expandedRail) 12 else 4), dp(6), dp(if (expandedRail) 12 else 4), dp(6)); cornerRadius = dp(8)
                     iconSize = dp(18); iconPadding = dp(6)
+                    iconGravity = if (expandedRail) com.google.android.material.button.MaterialButton.ICON_GRAVITY_TEXT_START
+                        else com.google.android.material.button.MaterialButton.ICON_GRAVITY_TOP
                     setIconResource(when (destination) { R.id.home -> R.drawable.ic_home; R.id.trip -> R.drawable.ic_trip; R.id.stock -> R.drawable.ic_stock; R.id.new_sale -> R.drawable.ic_new_sale; R.id.sales -> R.drawable.ic_sales; else -> R.drawable.ic_cash })
-                    layoutParams = android.widget.LinearLayout.LayoutParams(-2, -2)
+                    layoutParams = android.widget.LinearLayout.LayoutParams(-1, dp(if (expandedRail) 52 else 68)).apply { bottomMargin = dp(4) }
                     setOnClickListener { NavigationUI.onNavDestinationSelected(androidx.appcompat.widget.PopupMenu(this@MainActivity, this).menu.add(0, destination, 0, label), nav) }
                 })
             }
@@ -183,6 +188,7 @@ class MainActivity : AppCompatActivity() {
             binding.bottomNav.isVisible = false
             binding.adaptiveNav.isVisible = !login && !wide
             binding.wideNav.isVisible = !login && wide
+            binding.wideNavDivider.isVisible = !login && wide
             binding.toolbar.isVisible = !login
             // The web reference keeps one persistent branded app bar on every route.
             // Screen identity belongs in the page header, not in a second toolbar style.

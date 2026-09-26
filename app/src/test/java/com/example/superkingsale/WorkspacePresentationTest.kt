@@ -18,15 +18,16 @@ class WorkspacePresentationTest {
         val cards = workspacePresentation("sale_detail", WorkspaceState(data = data), listOf(Card("sale", "SAL-044", actions = actions), Card("totals", "Invoice totals")), "")
         assertEquals(actions, cards.first().actions)
         assertEquals("draft", cards.first().status)
-        assertTrue(cards.any { it.key == "totals" })
+        assertTrue(cards.first { it.key == "products" }.children.any { it.key == "products-total" })
     }
     @Test fun customerCollectionEligibilityRemainsInBusinessLayer() {
         val eligible = Card("customer10", "Shop", actions = listOf(CardAction("Collect credit", "collect", 10)))
         val ineligible = Card("customer11", "Cash shop")
         val data = Record.parse("""{"data":[{"id":10,"credit_allowed":true},{"id":11,"credit_allowed":false}]}""")
         val cards = workspacePresentation("customers", WorkspaceState(data = data), listOf(Card("new", "Customers"), eligible, ineligible), "")
-        assertEquals(eligible.actions, cards.first { it.key == eligible.key }.actions)
-        assertTrue(cards.first { it.key == ineligible.key }.actions.isEmpty())
+        val rows = cards.first { it.key == "customer-list" }.children
+        assertEquals(eligible.actions, rows.first { it.key == eligible.key }.actions)
+        assertTrue(rows.first { it.key == ineligible.key }.actions.isEmpty())
     }
     @Test fun stockPreviewLinksToTheExactReceiving() {
         val state = WorkspaceState(data = Record.parse("""{"summary":{"on_hand":24,"foc_on_hand":2,"incoming":12}}"""),
@@ -71,8 +72,9 @@ class WorkspacePresentationTest {
         val data = Record.parse("""{"data":{"reference":"SAL-1","customer":{"name":"Shop"},"items":[{"id":7,"quantity":2,"foc_quantity":0,"unit_price":1000,"line_total":2000,"product":{"name":"Oil","sku":"SKU-7"},"unit":{"name":"box"},"foc_unit":{"name":"box"}}]}}""")
         val cards = workspacePresentation("sale_detail", WorkspaceState(data = data), listOf(Card("sale", "SAL-1")), "")
         val products = cards.first { it.key == "products" }
-        assertEquals(CardKind.TABLE_ROW, products.children.single().kind)
-        assertEquals(listOf("Paid", "FOC", "Unit price", "Total"), products.children.single().metrics.map { it.title })
+        assertEquals(CardKind.TABLE_ROW, products.children.first().kind)
+        assertEquals(listOf("Paid", "FOC", "Unit price", "Total"), products.children.first().metrics.map { it.title })
+        assertEquals(CardKind.SALE_DETAIL_TOTAL, products.children.last().kind)
     }
     @Test fun homeUsesReactPreviewHierarchy() {
         val data = Record.parse("""{"as_of":"2026-09-18T09:11:04Z","representative":{"code":"SR-10"},"kpis":{},"recent_sales":[],"stock":[],"pending_receivings":[]}""")

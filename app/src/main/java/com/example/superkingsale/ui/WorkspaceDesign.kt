@@ -93,6 +93,13 @@ internal fun Context.column(padding: Int = 0) = LinearLayout(this).apply {
     setPadding(dp(padding), dp(padding), dp(padding), dp(padding))
     layoutParams = ViewGroup.LayoutParams(-1, -2)
 }
+/** Keeps modal sheets phone-like on tablets instead of stretching controls edge to edge. */
+internal fun View.fitTabletBottomSheet(maxWidthDp: Int = 720) {
+    if (resources.configuration.screenWidthDp < 600) return
+    layoutParams = layoutParams.apply { width = context.dp(maxWidthDp).coerceAtMost(resources.displayMetrics.widthPixels) }
+    (layoutParams as? androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams)?.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+    requestLayout()
+}
 internal fun LinearLayout.copyText(value: String, size: Float = 14f, bold: Boolean = false, color: Int = R.color.workspace_text): TextView = TextView(context).also {
     it.text = context.tr(value); it.textSize = size; it.setTextColor(context.ink(color))
     if (bold) it.setTypeface(it.typeface, Typeface.BOLD)
@@ -307,7 +314,7 @@ internal fun cardView(context: Context, item: Card, enabled: () -> Boolean, acti
             orientation = LinearLayout.HORIZONTAL
             minimumWidth = context.dp(640)
         }
-        root.addView(row, LinearLayout.LayoutParams(context.dp(640), -2))
+        root.addView(row, LinearLayout.LayoutParams(-1, -2))
         item.metrics.forEach { metric ->
             context.column().apply {
                 setPadding(context.dp(2), context.dp(2), context.dp(2), context.dp(2))
@@ -926,7 +933,7 @@ internal fun cardView(context: Context, item: Card, enabled: () -> Boolean, acti
     if (tableContent != null) {
         root.addView(HorizontalScrollView(context).apply {
             isHorizontalScrollBarEnabled = false
-            isFillViewport = false
+            isFillViewport = true
             addView(tableContent)
         }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = context.dp(6) })
     }

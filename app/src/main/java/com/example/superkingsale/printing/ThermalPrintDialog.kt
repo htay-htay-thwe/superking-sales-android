@@ -181,6 +181,7 @@ class ThermalPrintDialog : BottomSheetDialogFragment() {
             setContentView(frame)
             setOnShowListener {
                 findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
+                    sheet.fitTabletBottomSheet()
                     sheet.layoutParams.height = (resources.displayMetrics.heightPixels * .9f).toInt()
                     sheet.requestLayout()
                     BottomSheetBehavior.from(sheet).apply {

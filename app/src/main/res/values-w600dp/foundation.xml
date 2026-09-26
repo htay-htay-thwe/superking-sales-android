@@ -1,0 +1,8 @@
+<resources>
+    <dimen name="foundation_phone_header">72dp</dimen>
+    <dimen name="foundation_home_gutter">24dp</dimen>
+    <dimen name="foundation_screen_padding">24dp</dimen>
+    <dimen name="foundation_nav_padding">24dp</dimen>
+    <dimen name="foundation_content_max">1200dp</dimen>
+    <dimen name="foundation_tablet_nav_width">88dp</dimen>
+</resources>
