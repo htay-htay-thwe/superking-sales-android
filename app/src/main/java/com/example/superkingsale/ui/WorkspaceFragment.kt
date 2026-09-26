@@ -473,7 +473,9 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
         keepDialog = false
         vm.saved["dialog"] = "Change password"
         val ui = requireContext()
-        val constrainedHeight = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val isTablet = resources.configuration.screenWidthDp >= 600
+        val constrainedHeight = !isTablet &&
+            resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val frame = ui.column().apply {
             setBackgroundColor(ui.ink(R.color.workspace_surface))
             if (constrainedHeight) layoutParams = android.view.ViewGroup.LayoutParams(-1, -1)
