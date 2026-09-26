@@ -475,7 +475,7 @@ class SaleFragment : Fragment(R.layout.fragment_workspace) {
             setBackgroundColor(context.ink(R.color.workspace_surface))
             addView(fields)
         }
-        frame.addView(scroll, LinearLayout.LayoutParams(-1, -2))
+        frame.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         val fixedFooter = requireContext().column(10).apply {
             setBackgroundColor(context.ink(R.color.workspace_background))
             addView(View(context).apply { setBackgroundColor(context.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, context.dp(1)))
@@ -490,14 +490,14 @@ class SaleFragment : Fragment(R.layout.fragment_workspace) {
                 vm.createCustomer(values + ("region_id" to region.toLong())); customerSheet?.dismiss()
             }
         }.apply { backgroundTintList = ColorStateList.valueOf(context.ink(R.color.workspace_accent)); setTextColor(context.ink(R.color.workspace_surface)) }
-        fields.addView(fixedFooter, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.dp(4) })
-        frame.layoutParams = ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT)
+        frame.addView(fixedFooter, LinearLayout.LayoutParams(-1, -2))
+        frame.layoutParams = ViewGroup.LayoutParams(-1, ViewGroup.LayoutParams.MATCH_PARENT)
         customerSheet = com.google.android.material.bottomsheet.BottomSheetDialog(requireContext()).apply {
             setContentView(frame)
             setOnShowListener {
                 findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
                     sheet.fitTabletBottomSheet()
-                    sheet.layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                    sheet.layoutParams.height = (resources.displayMetrics.heightPixels * .9f).toInt()
                     sheet.minimumHeight = 0
                     sheet.requestLayout()
                     com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheet).apply {

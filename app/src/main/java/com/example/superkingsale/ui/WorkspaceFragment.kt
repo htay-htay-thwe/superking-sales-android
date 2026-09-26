@@ -473,7 +473,11 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
         keepDialog = false
         vm.saved["dialog"] = "Change password"
         val ui = requireContext()
-        val frame = ui.column().apply { setBackgroundColor(ui.ink(R.color.workspace_surface)) }
+        val constrainedHeight = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val frame = ui.column().apply {
+            setBackgroundColor(ui.ink(R.color.workspace_surface))
+            if (constrainedHeight) layoutParams = android.view.ViewGroup.LayoutParams(-1, -1)
+        }
         val header = ui.column(12)
         val headerRow = LinearLayout(ui).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
         headerRow.addView(ui.column().apply {
@@ -492,7 +496,9 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
         val current = dialogField(form, "current_password", "Current password", type = passwordType)
         val password = dialogField(form, "password", "New password", type = passwordType)
         val confirm = dialogField(form, "password_confirmation", "Confirm password", type = passwordType)
-        frame.addView(ScrollView(ui).apply { addView(form) }, LinearLayout.LayoutParams(-1, -2))
+        frame.addView(androidx.core.widget.NestedScrollView(ui).apply {
+            isFillViewport = true; isNestedScrollingEnabled = true; addView(form)
+        }, if (constrainedHeight) LinearLayout.LayoutParams(-1, 0, 1f) else LinearLayout.LayoutParams(-1, -2))
         val footer = ui.column(10).apply { setBackgroundColor(ui.ink(R.color.workspace_background)) }
         footer.addView(View(ui).apply { setBackgroundColor(ui.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, ui.dp(1)))
         val actions = footer.grid(140, 2)
@@ -512,7 +518,9 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             setOnShowListener {
                 findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
                     sheet.fitTabletBottomSheet()
-                    sheet.layoutParams.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT; sheet.minimumHeight = 0; sheet.requestLayout()
+                    sheet.layoutParams.height = if (constrainedHeight) (resources.displayMetrics.heightPixels * .9f).toInt()
+                        else android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                    sheet.minimumHeight = 0; sheet.requestLayout()
                     com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheet).apply {
                         state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED; skipCollapsed = true; isDraggable = true
                     }
@@ -533,7 +541,10 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
         keepDialog = false
         vm.saved["dialog"] = "New customer"
         val ui = requireContext()
-        val frame = ui.column().apply { setBackgroundColor(ui.ink(R.color.workspace_surface)) }
+        val frame = ui.column().apply {
+            setBackgroundColor(ui.ink(R.color.workspace_surface))
+            layoutParams = android.view.ViewGroup.LayoutParams(-1, -1)
+        }
         val header = ui.column(12)
         val headerRow = LinearLayout(ui).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
         headerRow.addView(ui.column().apply {
