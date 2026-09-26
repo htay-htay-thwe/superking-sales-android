@@ -158,7 +158,6 @@ class SaleFragment : Fragment(R.layout.fragment_workspace) {
                 products()
             }
             3 -> {
-                b.form.eyebrow("STEP 3 OF 4")
                 b.form.copyText("Quantity", 18f, true)
                 b.form.copyText("Set the required quantity for every selected product.", 12f, color = R.color.workspace_muted)
                 b.form.addView(View(requireContext()).apply {
@@ -183,7 +182,6 @@ class SaleFragment : Fragment(R.layout.fragment_workspace) {
                 }
             }
             4 -> {
-                b.form.eyebrow("STEP 4 OF 4")
                 b.form.copyText("Review & submit", 18f, true)
                 b.form.copyText("Confirm the sale details before saving or posting.", 12f, color = R.color.workspace_muted)
                 b.form.addView(View(requireContext()).apply { setBackgroundColor(context.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, requireContext().dp(1)).apply {
@@ -228,7 +226,6 @@ class SaleFragment : Fragment(R.layout.fragment_workspace) {
                     setPadding(0, requireContext().dp(8), 0, 0)
                 }
                 b.controls.addView(productHeader, LinearLayout.LayoutParams(-1, -2))
-                productHeader.eyebrow("STEP 2 OF 4")
                 productHeader.copyText("Products", 18f, true)
                 productHeader.copyText("Choose one or more products for this sale.", 12f, color = R.color.workspace_muted)
                 productHeader.addView(View(requireContext()).apply {
@@ -237,8 +234,6 @@ class SaleFragment : Fragment(R.layout.fragment_workspace) {
                     topMargin = requireContext().dp(8); bottomMargin = requireContext().dp(2)
                 })
                 productHeader.field("Search by product name or SKU", productQuery) { productQuery = it; products() }
-            } else {
-                if (d.step !in 3..4) b.controls.copyText("Step ${d.step} of 4 · " + listOf("Information", "Products", "Quantity", "Review & submit")[d.step - 1], 12f, color = R.color.workspace_muted)
             }
         }
         if (d.step in 2..3) {
@@ -301,14 +296,12 @@ class SaleFragment : Fragment(R.layout.fragment_workspace) {
         }, LinearLayout.LayoutParams(-2, ui.dp(44)))
         card.addView(cardHeading, LinearLayout.LayoutParams(-1, -2))
         card.stepper(1, ui.dp(14))
-        card.eyebrow("STEP 1 OF 4")
         card.copyText("Information", 18f)
         card.copyText("Add the customer and payment details.", 12f, color = R.color.workspace_muted)
         card.addView(View(requireContext()).apply { setBackgroundColor(context.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, ui.dp(1)).apply {
             topMargin = ui.dp(10); bottomMargin = ui.dp(10)
         })
 
-                b.form.eyebrow("STEP 3 OF 4")
                 b.form.copyText("Quantity", 18f, true)
         card.eyebrow("CUSTOMER")
         val customerPicker = LinearLayout(requireContext()).apply {

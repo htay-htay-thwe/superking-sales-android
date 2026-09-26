@@ -102,6 +102,8 @@ internal fun View.fitTabletBottomSheet(maxWidthDp: Int = 720) {
         cornerRadius = context.dp(16).toFloat()
         setColor(context.ink(R.color.workspace_surface))
     }
+    clipToOutline = true
+    outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
     elevation = context.dp(12).toFloat()
     requestLayout()
     post {
