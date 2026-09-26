@@ -723,7 +723,12 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
         val available = vm.state.value.options.number("available_to_submit")
         val trip = vm.state.value.extra
         val ui = requireContext()
-        val frame = ui.column().apply { setBackgroundColor(context.ink(R.color.workspace_surface)) }
+        val constrainedHeight = resources.configuration.screenWidthDp < 600 &&
+            resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val frame = ui.column().apply {
+            setBackgroundColor(context.ink(R.color.workspace_surface))
+            if (constrainedHeight) layoutParams = android.view.ViewGroup.LayoutParams(-1, -1)
+        }
         val header = ui.column(12).apply {
             val line = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
             line.addView(context.column().apply {
@@ -761,7 +766,10 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
         form.copyText("Pending handovers reserve the available amount.", 11f, color = R.color.workspace_muted)
         val notes = dialogField(form, "notes", "Handover note", type = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE)
         dialogFields.putAll(mapOf("amount" to amount, "notes" to notes))
-        frame.addView(ScrollView(ui).apply { addView(form) }, LinearLayout.LayoutParams(-1, -2))
+        frame.addView(ScrollView(ui).apply {
+            isFillViewport = true
+            addView(form)
+        }, if (constrainedHeight) LinearLayout.LayoutParams(-1, 0, 1f) else LinearLayout.LayoutParams(-1, -2))
         val footer = ui.column(10).apply { setBackgroundColor(context.ink(R.color.workspace_background)) }
         footer.addView(View(ui).apply { setBackgroundColor(context.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, ui.dp(1)))
         val actions = footer.grid(140, 2)
@@ -779,12 +787,14 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             setOnShowListener {
                 findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
                     sheet.fitTabletBottomSheet()
-                    sheet.layoutParams.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                    sheet.layoutParams.height = if (constrainedHeight) {
+                        (resources.displayMetrics.heightPixels * .9f).toInt()
+                    } else android.view.ViewGroup.LayoutParams.WRAP_CONTENT
                     sheet.minimumHeight = 0
                     sheet.requestLayout()
                     com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheet).apply {
                         state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
-                        skipCollapsed = true; isDraggable = true
+                        skipCollapsed = true; isDraggable = !constrainedHeight
                     }
                 }
             }
