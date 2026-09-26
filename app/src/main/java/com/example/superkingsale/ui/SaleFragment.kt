@@ -158,7 +158,6 @@ class SaleFragment : Fragment(R.layout.fragment_workspace) {
                 products()
             }
             3 -> {
-                b.form.copyText("Quantity", 18f, true)
                 b.form.copyText("Set the required quantity for every selected product.", 12f, color = R.color.workspace_muted)
                 b.form.addView(View(requireContext()).apply {
                     setBackgroundColor(context.ink(R.color.workspace_line))
@@ -301,8 +300,6 @@ class SaleFragment : Fragment(R.layout.fragment_workspace) {
         card.addView(View(requireContext()).apply { setBackgroundColor(context.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, ui.dp(1)).apply {
             topMargin = ui.dp(10); bottomMargin = ui.dp(10)
         })
-
-                b.form.copyText("Quantity", 18f, true)
         card.eyebrow("CUSTOMER")
         val customerPicker = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; surface(); minimumHeight = context.dp(52)
