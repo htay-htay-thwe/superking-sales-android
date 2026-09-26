@@ -81,10 +81,11 @@ class ResponsiveLayoutTest {
                 scenario.onActivity { it.open(id, when (id) { R.id.sale_detail -> 44; R.id.receiving -> 9; else -> 0 }) }
                 settle(scenario)
                 scenario.onActivity {
-                    val wide = it.resources.configuration.screenWidthDp >= 600
-                    assertEquals(wide, it.findViewById<View>(R.id.wide_nav).isVisible)
-                    assertEquals(!wide, it.findViewById<View>(R.id.adaptive_nav).isVisible)
+                    assertFalse(it.findViewById<View>(R.id.wide_nav).isVisible)
+                    assertTrue(it.findViewById<View>(R.id.adaptive_nav).isVisible)
                     assertEquals(false, it.findViewById<View>(R.id.bottom_nav).isVisible)
+                    val navigation = it.findViewById<View>(R.id.adaptive_nav)
+                    assertTrue("Navigation must remain at the bottom on phones and tablets", navigation.bottom >= it.findViewById<View>(R.id.nav_host).bottom)
                     assertTrue(it.findViewById<View>(R.id.account_menu).width >= (48 * it.resources.displayMetrics.density).toInt())
                     val menu = it.findViewById<View>(R.id.account_menu)
                     val visible = android.graphics.Rect()

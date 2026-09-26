@@ -93,12 +93,27 @@ internal fun Context.column(padding: Int = 0) = LinearLayout(this).apply {
     setPadding(dp(padding), dp(padding), dp(padding), dp(padding))
     layoutParams = ViewGroup.LayoutParams(-1, -2)
 }
-/** Keeps modal sheets phone-like on tablets instead of stretching controls edge to edge. */
+/** Phone uses a bottom sheet; tablets use the same content as a centered, width-limited modal sheet. */
 internal fun View.fitTabletBottomSheet(maxWidthDp: Int = 720) {
     if (resources.configuration.screenWidthDp < 600) return
     layoutParams = layoutParams.apply { width = context.dp(maxWidthDp).coerceAtMost(resources.displayMetrics.widthPixels) }
-    (layoutParams as? androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams)?.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+    (layoutParams as? androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams)?.gravity = Gravity.CENTER_HORIZONTAL
+    background = GradientDrawable().apply {
+        cornerRadius = context.dp(16).toFloat()
+        setColor(context.ink(R.color.workspace_surface))
+    }
+    elevation = context.dp(12).toFloat()
     requestLayout()
+    post {
+        val parentHeight = (parent as? View)?.height ?: resources.displayMetrics.heightPixels
+        val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(this)
+        behavior.isFitToContents = false
+        behavior.expandedOffset = ((parentHeight - height) / 2).coerceAtLeast(0)
+        behavior.skipCollapsed = true
+        behavior.isHideable = false
+        behavior.isDraggable = false
+        behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+    }
 }
 internal fun LinearLayout.copyText(value: String, size: Float = 14f, bold: Boolean = false, color: Int = R.color.workspace_text): TextView = TextView(context).also {
     it.text = context.tr(value); it.textSize = size; it.setTextColor(context.ink(color))

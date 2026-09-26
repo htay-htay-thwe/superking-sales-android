@@ -15,7 +15,6 @@ import com.google.android.material.snackbar.Snackbar
 import androidx.lifecycle.*
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.NavigationUI
 import com.example.superkingsale.databinding.ActivityMainBinding
 import com.example.superkingsale.ui.SessionViewModel
 import com.example.superkingsale.ui.tr
@@ -24,7 +23,10 @@ import com.example.superkingsale.ui.ink
 import com.example.superkingsale.ui.LocalizedDialogBuilder as MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -33,6 +35,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.painterResource
@@ -109,11 +112,12 @@ class MainActivity : AppCompatActivity() {
         binding.adaptiveNav.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
         binding.adaptiveNav.setContent {
             MaterialTheme {
-                NavigationBar(
-                    containerColor = Color(ink(R.color.workspace_surface)),
-                    modifier = Modifier.height(64.dp),
-                    windowInsets = WindowInsets(0, 0, 0, 0)
-                ) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+                    NavigationBar(
+                        containerColor = Color(ink(R.color.workspace_surface)),
+                        modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp).height(64.dp),
+                        windowInsets = WindowInsets(0, 0, 0, 0)
+                    ) {
                     listOf(
                         Triple(R.id.home, R.drawable.ic_home, "Home"),
                         Triple(R.id.trip, R.drawable.ic_trip, "Trip"),
@@ -135,6 +139,7 @@ class MainActivity : AppCompatActivity() {
                             )
                         )
                     }
+                    }
                 }
             }
         }
@@ -148,11 +153,10 @@ class MainActivity : AppCompatActivity() {
             binding.statusBarScrim.layoutParams = binding.statusBarScrim.layoutParams.apply { height = bars.top }
             val login = nav.currentDestination?.id == R.id.login
             val typing = insets.isVisible(WindowInsetsCompat.Type.ime())
-            val wide = resources.getBoolean(R.bool.wide_workspace)
             binding.bottomNav.isVisible = false
-            binding.adaptiveNav.isVisible = !login && !wide && !typing
-            binding.wideNav.isVisible = !login && wide && !typing
-            binding.wideNavDivider.isVisible = !login && wide && !typing
+            binding.adaptiveNav.isVisible = !login && !typing
+            binding.wideNav.isVisible = false
+            binding.wideNavDivider.isVisible = false
             binding.toolbar.isVisible = !login && !(typing && resources.configuration.screenHeightDp < 600)
             insets
         }
@@ -166,29 +170,12 @@ class MainActivity : AppCompatActivity() {
         binding.workspaceLabel.isVisible = wide
         binding.onlineStatus.isVisible = wide
         binding.accountName.isVisible = wide
-        if (wide) {
-            binding.bottomNav.menu.clear()
-            val expandedRail = resources.configuration.screenWidthDp >= 840
-            listOf(R.id.home to "Home", R.id.trip to "Trip", R.id.stock to "My stock", R.id.new_sale to "New sale", R.id.sales to "Sales", R.id.cash to "Cash").forEach { (destination, label) ->
-                binding.wideNav.addView(com.google.android.material.button.MaterialButton(this).apply {
-                    id = destination; text = tr(label); isAllCaps = false; textSize = 11f; minWidth = 0
-                    minHeight = dp(if (expandedRail) 52 else 68); minimumHeight = minHeight
-                    setPadding(dp(if (expandedRail) 12 else 4), dp(6), dp(if (expandedRail) 12 else 4), dp(6)); cornerRadius = dp(8)
-                    iconSize = dp(18); iconPadding = dp(6)
-                    iconGravity = if (expandedRail) com.google.android.material.button.MaterialButton.ICON_GRAVITY_TEXT_START
-                        else com.google.android.material.button.MaterialButton.ICON_GRAVITY_TOP
-                    setIconResource(when (destination) { R.id.home -> R.drawable.ic_home; R.id.trip -> R.drawable.ic_trip; R.id.stock -> R.drawable.ic_stock; R.id.new_sale -> R.drawable.ic_new_sale; R.id.sales -> R.drawable.ic_sales; else -> R.drawable.ic_cash })
-                    layoutParams = android.widget.LinearLayout.LayoutParams(-1, dp(if (expandedRail) 52 else 68)).apply { bottomMargin = dp(4) }
-                    setOnClickListener { NavigationUI.onNavDestinationSelected(androidx.appcompat.widget.PopupMenu(this@MainActivity, this).menu.add(0, destination, 0, label), nav) }
-                })
-            }
-        }
         nav.addOnDestinationChangedListener { _, destination, _ ->
             val login = destination.id == R.id.login
             binding.bottomNav.isVisible = false
-            binding.adaptiveNav.isVisible = !login && !wide
-            binding.wideNav.isVisible = !login && wide
-            binding.wideNavDivider.isVisible = !login && wide
+            binding.adaptiveNav.isVisible = !login
+            binding.wideNav.isVisible = false
+            binding.wideNavDivider.isVisible = false
             binding.toolbar.isVisible = !login
             // The web reference keeps one persistent branded app bar on every route.
             // Screen identity belongs in the page header, not in a second toolbar style.
@@ -202,14 +189,6 @@ class MainActivity : AppCompatActivity() {
             val top = destination.id in setOf(R.id.home, R.id.trip, R.id.new_sale, R.id.sales, R.id.cash, R.id.customers)
             binding.workspaceBack.isVisible = !top
             if (top) selectedDestination.intValue = destination.id
-            for (i in 0 until binding.wideNav.childCount) {
-                (binding.wideNav.getChildAt(i) as com.google.android.material.button.MaterialButton).apply {
-                    isSelected = id == destination.id
-                    backgroundTintList = android.content.res.ColorStateList.valueOf(ink(if (isSelected) R.color.workspace_tint else R.color.workspace_background))
-                    setTextColor(ink(if (isSelected) R.color.workspace_primary else R.color.workspace_muted))
-                    iconTint = android.content.res.ColorStateList.valueOf(ink(if (isSelected) R.color.workspace_primary else R.color.workspace_muted))
-                }
-            }
         }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
