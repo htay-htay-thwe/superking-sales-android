@@ -88,6 +88,7 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
                     b.form.enableChildren(!s.busy && !s.loading)
                     b.list.enableChildren(!s.busy && !s.loading)
                     b.retry.isEnabled = !s.loading && !s.busy
+                    if (s.notice.isBlank()) notice = ""
                     if (s.notice.isNotBlank() && s.notice != notice) {
                         notice = s.notice; dialog?.dismiss(); dialog = null; cashSheet?.dismiss(); cashSheet = null
                         Snackbar.make(b.root, requireContext().tr(s.notice), Snackbar.LENGTH_LONG).show()
