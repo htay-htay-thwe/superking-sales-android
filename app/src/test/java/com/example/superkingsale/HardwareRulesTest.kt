@@ -7,16 +7,19 @@ import org.junit.Test
 
 class HardwareRulesTest {
     @Test fun locationRejectsStaleFutureInvalidAndMissingAccuracy() {
-        val now = 100_000_000_000L
+        val now = 200_000_000_000L
         assertTrue(FixQuality.usable(21.0, 96.0, 12f, now - 10, now))
         assertTrue(FixQuality.usable(21.0, 96.0, 2000f, now - 10, now)) // approximation requires UI consent, not a hidden business restriction
-        assertFalse(FixQuality.usable(21.0, 96.0, 12f, now - 31_000_000_000, now))
+        assertTrue(FixQuality.usable(21.0, 96.0, 12f, now - 119_000_000_000, now))
+        assertFalse(FixQuality.usable(21.0, 96.0, 12f, now - 121_000_000_000, now))
         assertFalse(FixQuality.usable(21.0, 96.0, 12f, now + 1, now))
         assertFalse(FixQuality.usable(Double.NaN, 96.0, 12f, now, now))
         assertFalse(FixQuality.usable(91.0, 96.0, 12f, now, now))
         assertFalse(FixQuality.usable(21.0, 181.0, 12f, now, now))
         assertFalse(FixQuality.usable(21.0, 96.0, 0f, now, now))
         assertFalse(FixQuality.usable(21.0, 96.0, Float.NaN, now, now))
+        assertTrue(FixQuality.usableWallTime(21.0, 96.0, 12f, 1_000_000, 1_119_000))
+        assertFalse(FixQuality.usableWallTime(21.0, 96.0, 12f, 1_000_000, 1_121_000))
     }
     @Test fun rasterHeaderAndBitOrderMatchEscPos() {
         val bytes = EscPos.raster(16, 2) { x, y -> (y == 0 && x in listOf(0, 7, 8)) || (y == 1 && x == 15) }

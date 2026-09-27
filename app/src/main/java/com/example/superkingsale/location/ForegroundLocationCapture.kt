@@ -34,10 +34,10 @@ class ForegroundLocationCapture(private val fragment: Fragment) : DefaultLifecyc
     private var dialog: androidx.appcompat.app.AlertDialog? = null
     private var callback: ((Location) -> Unit)? = null
     private var best: Location? = null
+    private var awaitingSettings = false
     private val permissions = fragment.registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         if (granted(Manifest.permission.ACCESS_COARSE_LOCATION) || granted(Manifest.permission.ACCESS_FINE_LOCATION)) acquire()
         else {
-            callback = null
             settings("Location permission is required to create a sale. Allow location in Android app settings, then retry.", true)
         }
     }
@@ -56,31 +56,39 @@ class ForegroundLocationCapture(private val fragment: Fragment) : DefaultLifecyc
     private fun settings(message: String, app: Boolean) {
         dialog?.dismiss()
         dialog = LocalizedDialogBuilder(context).setTitle("Location settings").setMessage(message)
-            .setNegativeButton("Cancel", null).setPositiveButton("Open settings") { _, _ ->
+            .setNegativeButton("Cancel") { _, _ -> cancel() }.setPositiveButton("Open settings") { _, _ ->
                 val intent = if (app) Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
                     else Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                awaitingSettings = true
                 runCatching { fragment.startActivity(intent) }
             }.show()
     }
-    private fun usable(location: Location) = location.hasAccuracy() && FixQuality.usable(location.latitude, location.longitude,
-        location.accuracy, location.elapsedRealtimeNanos, SystemClock.elapsedRealtimeNanos())
+    private fun usable(location: Location): Boolean {
+        if (!location.hasAccuracy()) return false
+        return if (location.elapsedRealtimeNanos > 0L) FixQuality.usable(location.latitude, location.longitude,
+            location.accuracy, location.elapsedRealtimeNanos, SystemClock.elapsedRealtimeNanos())
+        else FixQuality.usableWallTime(location.latitude, location.longitude, location.accuracy,
+            location.time, System.currentTimeMillis())
+    }
     private fun acquire() {
         if (callback == null || !fragment.isAdded) return
         dialog?.dismiss()
         val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        if (!fine && !coarse) { callback = null; settings("Location permission is required.", true); return }
+        if (!fine && !coarse) { settings("Location permission is required.", true); return }
         val service = context.getSystemService(LocationManager::class.java)
         manager = service
-        val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER).filter {
-            (fine || it != LocationManager.GPS_PROVIDER) && runCatching { service.isProviderEnabled(it) }.getOrDefault(false)
+        val priority = listOf("fused", LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER)
+        val enabled = runCatching { service.getProviders(true) }.getOrDefault(emptyList())
+        val providers = (priority + enabled).distinct().filter { provider ->
+            provider in enabled && (fine || provider != LocationManager.GPS_PROVIDER)
         }
-        if (providers.isEmpty()) { callback = null; settings("Turn on device location, then try again.", false); return }
+        if (providers.isEmpty()) { settings("Turn on device location, then return to this app. Location capture will retry automatically.", false); return }
         best = null
         providers.mapNotNull { provider -> runCatching { service.getLastKnownLocation(provider) }.getOrNull() }
             .filter(::usable).minByOrNull { it.accuracy }?.let { deliver(it); return }
         dialog = LocalizedDialogBuilder(context).setTitle("Getting current location…")
-            .setMessage("Move outdoors or near a window. Keep this screen open; acquisition can take up to 45 seconds.")
+            .setMessage("Getting a location from this device. Move outdoors or near a window if needed.")
             .setNegativeButton("Cancel") { _, _ -> cancel() }.setOnCancelListener { cancel() }.show()
         listener = object : LocationListener {
             override fun onLocationChanged(location: Location) {
@@ -94,30 +102,35 @@ class ForegroundLocationCapture(private val fragment: Fragment) : DefaultLifecyc
             override fun onProviderDisabled(provider: String) {}
         }
         try {
-            providers.forEach { service.requestLocationUpdates(it, 1000L, 0f, listener!!, Looper.getMainLooper()) }
+            val requested = providers.count { provider ->
+                runCatching { service.requestLocationUpdates(provider, 1000L, 0f, listener!!, Looper.getMainLooper()) }.isSuccess
+            }
+            if (requested == 0) { stopUpdates(); settings("This device did not allow any location provider. Check app permission and device location, then return to retry.", true); return }
             timeout = fragment.lifecycleScope.launch {
-                for (remaining in 45 downTo 1) {
-                    dialog?.setMessage(context.tr("Move outdoors or near a window. Keep this screen open; acquisition can take up to 45 seconds.") +
+                for (remaining in 30 downTo 1) {
+                    dialog?.setMessage(context.tr("Getting a location from this device. Move outdoors or near a window if needed.") +
                         "\n" + context.tr("Seconds remaining: $remaining") + (best?.let { "\n" + context.tr("Accuracy: ${it.accuracy.toInt()} m") } ?: ""))
                     delay(1000)
                 }
                 val fix = best?.takeIf(::usable)
                 if (fix != null) confirmApproximate(fix) else {
-                    cancel()
+                    stopUpdates(); best = null; dialog?.dismiss()
                     dialog = LocalizedDialogBuilder(context).setTitle("Location unavailable")
                         .setMessage("No fresh location was received. Move outdoors, check device location settings and retry. Your sale draft is unchanged.")
-                        .setPositiveButton("OK", null).show()
+                        .setNegativeButton("Cancel") { _, _ -> cancel() }
+                        .setPositiveButton("Retry") { _, _ -> callback?.let { acquire() } }
+                        .setOnCancelListener { cancel() }.show()
                 }
             }
-        } catch (_: SecurityException) { cancel(); settings("Location permission is required.", true) }
-        catch (_: IllegalArgumentException) { cancel(); settings("Turn on device location, then try again.", false) }
+        } catch (_: SecurityException) { stopUpdates(); settings("Location permission is required.", true) }
+        catch (_: IllegalArgumentException) { stopUpdates(); settings("Turn on device location, then return to retry automatically.", false) }
     }
     private fun confirmApproximate(fix: Location) {
         stopUpdates(); dialog?.dismiss()
         dialog = LocalizedDialogBuilder(context).setTitle("Check location accuracy")
             .setMessage(context.tr("This location is approximate. You may retry outdoors or allow precise location in app settings.") + "\n\n" + describe(fix))
             .setNegativeButton("Cancel") { _, _ -> callback = null }
-            .setNeutralButton("App settings") { _, _ -> callback = null; settings("Allow precise location in Android app settings, then retry.", true) }
+            .setNeutralButton("App settings") { _, _ -> settings("Allow precise location in Android app settings, then return to retry automatically.", true) }
             .setPositiveButton("Use this location") { _, _ ->
                 if (usable(fix)) deliver(fix) else { val next = callback; cancel(); next?.let(::start) }
             }.setOnCancelListener { callback = null }.show()
@@ -137,7 +150,10 @@ class ForegroundLocationCapture(private val fragment: Fragment) : DefaultLifecyc
         timeout?.cancel(); timeout = null
         listener?.let { runCatching { manager?.removeUpdates(it) } }; listener = null
     }
-    fun cancel() { stopUpdates(); callback = null; best = null; dialog?.dismiss(); dialog = null }
-    override fun onStop(owner: LifecycleOwner) { cancel() }
+    fun cancel() { stopUpdates(); callback = null; best = null; awaitingSettings = false; dialog?.dismiss(); dialog = null }
+    override fun onResume(owner: LifecycleOwner) {
+        if (awaitingSettings) { awaitingSettings = false; acquire() }
+    }
+    override fun onStop(owner: LifecycleOwner) { if (!awaitingSettings) cancel() else stopUpdates() }
     override fun onDestroy(owner: LifecycleOwner) { cancel() }
 }
