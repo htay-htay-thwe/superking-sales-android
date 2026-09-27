@@ -186,7 +186,7 @@ internal fun workspacePresentation(screen: String, state: WorkspaceState, origin
                 actions = pages.flatMap { it.actions }, kind = CardKind.PAGINATION)
             result += group("sales-activity", "Sales activity", "OWN TRANSACTIONS",
                 listOf(controls) + sales(saleRows, original.filter { it.key !in listOf("summary", "pages") }) + pagination,
-                listOf(action("New sale", "new_sale")))
+                listOf(action("New sale", "new_sale"), action("Filter sales", "sales_filters")))
         }
         "cash" -> {
             val cash = state.options; val trip = state.extra; val f = trip.obj("financial_summary")

@@ -850,13 +850,14 @@ internal fun cardView(context: Context, item: Card, enabled: () -> Boolean, acti
         return root
     }
     if (item.kind !in listOf(CardKind.HEADER, CardKind.SECTION, CardKind.ROW)) root.surface(item.kind == CardKind.CTA)
-    val splitHeading = (item.actions.size == 1 || (item.actions.isEmpty() && item.status.isNotBlank())) && item.kind in listOf(CardKind.HEADER, CardKind.SECTION, CardKind.GROUP)
+    val splitHeading = (item.key == "sales-activity" || item.actions.size == 1 || (item.actions.isEmpty() && item.status.isNotBlank())) &&
+        item.kind in listOf(CardKind.HEADER, CardKind.SECTION, CardKind.GROUP)
     val heading = if (splitHeading) {
         val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         if (item.key == "customer-list") row.setPadding(context.dp(12), 0, context.dp(12), 0)
         val left = context.column()
         row.addView(left, LinearLayout.LayoutParams(0, -2, 1f))
-        val right = if (item.key == "stock-receivings") LinearLayout(context).apply {
+        val right = if (item.key in listOf("stock-receivings", "sales-activity")) LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
         } else context.column().apply { gravity = Gravity.END }
         if (item.key == "stock-receivings" && item.status.isNotBlank()) {
@@ -885,11 +886,19 @@ internal fun cardView(context: Context, item: Card, enabled: () -> Boolean, acti
                 layoutParams = LinearLayout.LayoutParams(context.dp(48), context.dp(48))
             }
             if (item.key == "sales-activity") {
-                setIconResource(R.drawable.ic_new_sale); iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
-                iconPadding = context.dp(6); iconTint = ColorStateList.valueOf(context.ink(R.color.workspace_surface))
-                backgroundTintList = ColorStateList.valueOf(context.ink(R.color.workspace_accent))
-                setTextColor(context.ink(R.color.workspace_surface)); strokeWidth = 0
-                minHeight = context.dp(40)
+                minHeight = context.dp(40); minimumHeight = context.dp(40)
+                if (a.key == "sales_filters") {
+                    text = ""; setIconResource(R.drawable.ic_filter)
+                    iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START; iconPadding = 0
+                    iconTint = ColorStateList.valueOf(context.ink(R.color.workspace_accent))
+                    setPadding(0, 0, 0, 0); minWidth = context.dp(40); minimumWidth = context.dp(40)
+                    layoutParams = LinearLayout.LayoutParams(context.dp(40), context.dp(40)).apply { marginStart = context.dp(6) }
+                } else {
+                    setIconResource(R.drawable.ic_new_sale); iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
+                    iconPadding = context.dp(6); iconTint = ColorStateList.valueOf(context.ink(R.color.workspace_surface))
+                    backgroundTintList = ColorStateList.valueOf(context.ink(R.color.workspace_accent))
+                    setTextColor(context.ink(R.color.workspace_surface)); strokeWidth = 0
+                }
             }
             if (item.key in listOf("recent-sales", "stock-preview")) {
                 strokeWidth = 0; minWidth = 0; minimumWidth = 0; textSize = 10f

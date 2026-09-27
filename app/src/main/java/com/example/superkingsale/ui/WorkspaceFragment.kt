@@ -35,6 +35,8 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
     private var notice = ""
     private var dialog: androidx.appcompat.app.AlertDialog? = null
     private var cashSheet: com.google.android.material.bottomsheet.BottomSheetDialog? = null
+    private var filterDialog: android.app.Dialog? = null
+    private var salesSearchJob: kotlinx.coroutines.Job? = null
     private var keepDialog = false
     private var dialogError: android.widget.TextView? = null
     private var dialogFields = mutableMapOf<String, com.google.android.material.textfield.TextInputEditText>()
@@ -93,7 +95,15 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
         }
     }
     override fun onResume() { super.onResume(); vm.refreshIfChanged() }
-    override fun onDestroyView() { keepDialog = true; dialog?.dismiss(); dialog = null; cashSheet?.dismiss(); cashSheet = null; binding = null; super.onDestroyView() }
+    override fun onDestroyView() {
+        keepDialog = true
+        dialog?.dismiss(); dialog = null
+        cashSheet?.dismiss(); cashSheet = null
+        filterDialog?.dismiss(); filterDialog = null
+        salesSearchJob?.cancel(); salesSearchJob = null
+        binding = null
+        super.onDestroyView()
+    }
     private fun open(dest: Int, id: Long = 0) = host.open(dest, id)
     private fun action(label: String, key: String, id: Long = 0) = CardAction(label, key, id)
     private fun record(): Record = vm.state.value.data.obj("data")
@@ -198,6 +208,33 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             }
             return
         }
+        if (vm.screen == "sales") {
+            val search = container.field("Search sales", vm.saved["searchDraft"] ?: vm.query["search"].orEmpty()) {
+                vm.saved["searchDraft"] = it
+                salesSearchJob?.cancel()
+                salesSearchJob = viewLifecycleOwner.lifecycleScope.launch {
+                    kotlinx.coroutines.delay(450)
+                    val next = vm.query.toMutableMap()
+                    if (it.isBlank()) next.remove("search") else next["search"] = it.trim()
+                    vm.filter(next)
+                }
+            }
+            search.filters = arrayOf(android.text.InputFilter.LengthFilter(100))
+            search.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_search, 0, 0, 0)
+            search.compoundDrawablePadding = requireContext().dp(8)
+            search.isSingleLine = true
+            search.imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+            search.setOnEditorActionListener { _, actionId, _ ->
+                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+                    salesSearchJob?.cancel()
+                    val next = vm.query.toMutableMap()
+                    if (search.text.isNullOrBlank()) next.remove("search") else next["search"] = search.text.toString().trim()
+                    vm.filter(next)
+                    true
+                } else false
+            }
+            return
+        }
         if (vm.screen in listOf("stock", "sales", "customers")) {
             // Sales filters live inside the activity card, so use a compact phone-safe
             // minimum while keeping the same two-column structure on tablets.
@@ -205,17 +242,7 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             val fields = container.grid(filterCellWidth, 2)
             val search = fields.cell().field(if (vm.screen == "sales") "Search sales" else "Search", vm.saved["searchDraft"] ?: vm.query["search"].orEmpty()) { vm.saved["searchDraft"] = it }
             search.filters = arrayOf(android.text.InputFilter.LengthFilter(100))
-            if (vm.screen == "sales") {
-                var status = vm.query["status"].orEmpty()
-                fields.cell().choice("Status", listOf("" to "All statuses", "draft" to "Draft", "posted" to "Posted", "voided" to "Voided"), status) { status = it }
-                val actions = container.grid(filterCellWidth, 2)
-                actions.cell().button("More filters") { filters() }.outlined()
-                actions.cell().button("Apply") {
-                    vm.filter(vm.query + mapOf("search" to search.text.toString(), "status" to status))
-                }.apply { backgroundTintList = android.content.res.ColorStateList.valueOf(context.ink(R.color.workspace_accent)) }
-            } else {
-                fields.cell().button("Search") { vm.filter(vm.query + ("search" to search.text.toString())) }.outlined()
-            }
+            fields.cell().button("Search") { vm.filter(vm.query + ("search" to search.text.toString())) }.outlined()
         }
     }
     private fun render(s: WorkspaceState) {
@@ -395,6 +422,7 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             "stock" -> open(R.id.stock)
             "cash" -> open(R.id.cash)
             "sales" -> open(R.id.sales)
+            "sales_filters" -> filters()
             "customers" -> open(R.id.customers)
             "customer_new" -> newCustomerSheet()
             "receiving" -> open(R.id.receiving, a.id)
@@ -907,12 +935,50 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
         }; submit
     }
     private fun filters() {
-        val form = LinearLayout(requireContext()).apply { orientation = LinearLayout.VERTICAL; setPadding(context.dp(20), 0, context.dp(20), 0) }
+        filterDialog?.dismiss()
+        val ui = requireContext()
         val query = vm.query.toMutableMap()
-        form.field("Search", query["search"].orEmpty()) { query["search"] = it }
+        var tripsJob: kotlinx.coroutines.Job? = null
+        fun applyFilters() {
+            val clean = query.filterValues { it.isNotBlank() }
+            vm.saved["searchDraft"] = clean["search"].orEmpty()
+            vm.filter(clean)
+        }
+        val panel = ui.column().apply {
+            layoutParams = android.view.ViewGroup.LayoutParams(-1, -1)
+            setPadding(ui.dp(16), ui.dp(12), ui.dp(16), ui.dp(12))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = ui.dp(16).toFloat()
+                setColor(ui.ink(R.color.workspace_surface))
+            }
+            clipToOutline = true
+        }
+        val header = LinearLayout(ui).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
+        header.addView(ui.column().apply {
+            copyText("Filters", 20f, true)
+            copyText("Sales activity", 12f, color = R.color.workspace_muted)
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        header.addView(android.widget.TextView(ui).apply {
+            text = ui.tr("Clear"); textSize = 12f; setTextColor(ui.ink(R.color.workspace_accent))
+            setTypeface(typeface, android.graphics.Typeface.BOLD); gravity = android.view.Gravity.CENTER
+            setPadding(ui.dp(10), 0, ui.dp(10), 0); minHeight = ui.dp(44)
+            setOnClickListener {
+                val search = query["search"]
+                query.clear()
+                if (!search.isNullOrBlank()) query["search"] = search
+                applyFilters()
+                filterDialog?.dismiss()
+            }
+        }, LinearLayout.LayoutParams(-2, ui.dp(44)))
+        header.addView(com.google.android.material.button.MaterialButton(ui, null, com.google.android.material.R.attr.materialIconButtonStyle).apply {
+            text = "×"; textSize = 26f; includeFontPadding = false; setPadding(0, 0, 0, 0)
+            contentDescription = ui.tr("Close"); setOnClickListener { filterDialog?.dismiss() }
+        }, LinearLayout.LayoutParams(ui.dp(44), ui.dp(44)))
+        panel.addView(header)
+        panel.addView(View(ui).apply { setBackgroundColor(ui.ink(R.color.workspace_line)) }, LinearLayout.LayoutParams(-1, ui.dp(1)).apply { bottomMargin = ui.dp(4) })
+        val form = ui.column(4)
         if (vm.screen == "sales") {
-            var tripsJob: kotlinx.coroutines.Job? = null
-            val tripHost = LinearLayout(requireContext()).apply { orientation = LinearLayout.VERTICAL }
+            val tripHost = LinearLayout(ui).apply { orientation = LinearLayout.VERTICAL }
             fun loadTrips() {
                 tripsJob?.cancel()
                 tripHost.removeAllViews()
@@ -923,16 +989,27 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
                     try {
                         val options = host.repository.get("sale-history-options", query.filterKeys { it in setOf("period", "date_from", "date_to") }.filterValues { it.isNotBlank() })
                         tripHost.removeAllViews()
-                        tripHost.choice("Trip", listOf("" to "All trips in this duration") + options.rows("trips").map { it.id.toString() to (it.text("reference") + " · " + it.name) }, query["trip_id"].orEmpty()) { query["trip_id"] = it }
+                        tripHost.choice("Trip", listOf("" to "All trips in this duration") + options.rows("trips").map { it.id.toString() to (it.text("reference") + " · " + it.name) }, query["trip_id"].orEmpty()) {
+                            if (it.isBlank()) query.remove("trip_id") else query["trip_id"] = it
+                            applyFilters()
+                        }
                     } catch (e: kotlinx.coroutines.CancellationException) { throw e }
                     catch (e: Exception) { tripHost.removeAllViews(); tripHost.label(e.message.orEmpty()) }
                 }
             }
-            form.choice("Status", listOf("" to "All", "draft" to "Draft", "posted" to "Posted", "voided" to "Voided"), query["status"].orEmpty()) { query["status"] = it }
-            form.choice("Payment", listOf("" to "All", "cash" to "Cash / banking", "credit" to "Credit"), query["payment_type"].orEmpty()) { query["payment_type"] = it }
+            form.choice("Status", listOf("" to "All statuses", "draft" to "Draft", "posted" to "Posted", "voided" to "Voided"), query["status"].orEmpty()) {
+                if (it.isBlank()) query.remove("status") else query["status"] = it
+                applyFilters()
+            }
+            form.choice("Payment", listOf("" to "All payment types", "cash" to "Cash / banking", "credit" to "Credit"), query["payment_type"].orEmpty()) {
+                if (it.isBlank()) query.remove("payment_type") else query["payment_type"] = it
+                applyFilters()
+            }
             form.choice("Duration", listOf("" to "All time", "today" to "Today", "range" to "Date range"), query["period"].orEmpty()) {
-                query["period"] = it; query.remove("trip_id")
+                if (it.isBlank()) query.remove("period") else query["period"] = it
+                query.remove("trip_id")
                 if (it != "range") { query.remove("date_from"); query.remove("date_to") }
+                applyFilters()
                 loadTrips()
             }
             fun date(key: String, title: String) {
@@ -942,7 +1019,8 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
                     val now = java.util.Calendar.getInstance()
                     android.app.DatePickerDialog(requireContext(), { _, year, month, day ->
                         val value = String.format(java.util.Locale.US, "%04d-%02d-%02d", year, month + 1, day)
-                        query[key] = value; query["period"] = "range"; query.remove("trip_id"); edit.setText(value); loadTrips()
+                        query[key] = value; query["period"] = "range"; query.remove("trip_id"); edit.setText(value)
+                        applyFilters(); loadTrips()
                     }, now.get(1), now.get(2), now.get(5)).show()
                 }
             }
@@ -950,9 +1028,26 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             form.addView(tripHost)
             loadTrips()
         }
-        MaterialAlertDialogBuilder(requireContext()).setTitle("Filters").setView(ScrollView(requireContext()).apply { addView(form) })
-            .setNeutralButton("Clear") { _, _ -> vm.saved["searchDraft"] = ""; vm.filter(emptyMap()) }
-            .setNegativeButton("Cancel", null).setPositiveButton("Apply") { _, _ -> vm.saved["searchDraft"] = query["search"].orEmpty(); vm.filter(query.filterValues { it.isNotBlank() }) }.show()
+        panel.addView(ScrollView(ui).apply { isFillViewport = true; addView(form) }, LinearLayout.LayoutParams(-1, 0, 1f))
+        filterDialog = android.app.Dialog(ui).apply {
+            setContentView(panel)
+            setCanceledOnTouchOutside(true)
+            setOnDismissListener { tripsJob?.cancel(); filterDialog = null }
+            window?.apply {
+                setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+                addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                attributes = attributes.apply { dimAmount = .42f; gravity = android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL }
+            }
+            show()
+            window?.let { window ->
+                val width = (resources.displayMetrics.widthPixels * if (resources.configuration.smallestScreenWidthDp >= 600) .52f else .88f).toInt()
+                    .coerceAtMost(ui.dp(440))
+                val height = (resources.displayMetrics.heightPixels * .94f).toInt()
+                window.setLayout(width, height)
+                window.decorView.translationX = width.toFloat()
+                window.decorView.animate().translationX(0f).setDuration(220).start()
+            }
+        }
     }
     private fun printInvoice(id: Long) {
         viewLifecycleOwner.lifecycleScope.launch {
