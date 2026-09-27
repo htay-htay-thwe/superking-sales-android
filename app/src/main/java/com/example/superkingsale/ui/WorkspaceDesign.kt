@@ -261,12 +261,6 @@ internal fun cardView(context: Context, item: Card, enabled: () -> Boolean, acti
     if (item.kind == CardKind.CONTROLS) { controls?.invoke(root, item.key); return root }
     if (item.kind == CardKind.SALE_DETAIL_HEADER) {
         root.setPadding(context.dp(2), context.dp(6), context.dp(2), context.dp(10))
-        val back = TextView(context).apply {
-            text = "‹  " + context.tr("Sales"); textSize = 14f; setTypeface(typeface, Typeface.BOLD)
-            setTextColor(context.ink(R.color.workspace_muted)); setPadding(0, context.dp(4), 0, context.dp(8))
-            isClickable = true; setOnClickListener { if (enabled()) action(CardAction("Sales", "sales")) }
-        }
-        root.addView(back, LinearLayout.LayoutParams(-1, -2))
         root.eyebrow(item.eyebrow)
         root.copyText(item.title, 22f, false)
         if (item.detail.isNotBlank()) root.copyText(item.detail, 15f, color = R.color.workspace_muted)
