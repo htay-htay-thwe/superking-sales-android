@@ -796,7 +796,10 @@ internal fun cardView(context: Context, item: Card, enabled: () -> Boolean, acti
         }, LinearLayout.LayoutParams(context.dp(32), context.dp(32)).apply { marginEnd = context.dp(8) })
         val main = context.column()
         main.copyText(item.title, 14f, true).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
-        if (item.detail.isNotBlank()) main.copyText(item.detail.trim(), 12f, color = R.color.workspace_muted).apply { maxLines = 3; ellipsize = android.text.TextUtils.TruncateAt.END }
+        if (item.detail.isNotBlank()) main.copyText(item.detail.trim(), 12f, color = R.color.workspace_muted).apply {
+            maxLines = if (item.key.startsWith("expense")) 1 else 3
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        }
         line.addView(main, LinearLayout.LayoutParams(0, -2, 1f))
         if (item.value.isNotBlank() || item.status.isNotBlank()) {
             val side = context.column().apply { setPadding(context.dp(8), 0, 0, 0) }

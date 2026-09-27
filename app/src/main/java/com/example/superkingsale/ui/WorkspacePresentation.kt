@@ -100,7 +100,15 @@ internal fun workspacePresentation(screen: String, state: WorkspaceState, origin
                 action("New sale", "new_sale"), action("View stock", "stock"), action("Return cash", "cash"),
                 action("Record expense", "expense", record.id)))
             val tripSales = sales(record.rows("sales"), original.filter { it.key.startsWith("sale") })
-            val tripExpenses = original.filter { it.key.startsWith("expense") }.map(::row)
+            val expenseRows = record.rows("expenses")
+            val tripExpenses = original.filter { it.key.startsWith("expense") }.map { card ->
+                val expense = expenseRows.find { "expense${it.id}" == card.key }
+                if (expense == null) row(card) else card.copy(
+                    detail = listOf(displayTimestamp(expense.text("spent_at")), expense.text("notes"))
+                        .filter { it.isNotBlank() }.joinToString(" · "),
+                    kind = CardKind.ROW
+                )
+            }
             result += Card("trip-sales", "Recent sales", kind = CardKind.GROUP, eyebrow = "TRIP ACTIVITY", children =
                 tripSales.ifEmpty { listOf(Card("trip-sales-empty", "No sales yet", detail = "Posted sales for this trip will appear here.", kind = CardKind.EMPTY)) })
             result += Card("trip-expenses", "Trip expenses", kind = CardKind.GROUP, eyebrow = "EXPENSE HISTORY", children =
