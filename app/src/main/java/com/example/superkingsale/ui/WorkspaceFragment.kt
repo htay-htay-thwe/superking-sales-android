@@ -52,13 +52,20 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             b.list.setPaddingRelative(b.list.paddingLeft, b.list.paddingTop, b.list.paddingRight, b.list.paddingBottom + navigationHeight)
         }
         b.list.layoutManager = LinearLayoutManager(requireContext()); b.list.adapter = cards
+        b.list.addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: androidx.recyclerview.widget.RecyclerView, dx: Int, dy: Int) {
+                if (dy <= 0) return
+                val manager = recyclerView.layoutManager as? LinearLayoutManager ?: return
+                if (manager.findLastVisibleItemPosition() >= cards.itemCount - 4) vm.loadNextPage()
+            }
+        })
         cards.controls = ::inlineControls
-        b.retry.setOnClickListener { vm.load() }
-        b.configurePullRefresh({ !vm.state.value.loading && !vm.state.value.busy && dialog == null }) { vm.load() }
+        b.retry.setOnClickListener { vm.refresh() }
+        b.configurePullRefresh({ !vm.state.value.loading && !vm.state.value.loadingMore && !vm.state.value.busy && dialog == null }) { vm.refresh() }
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 vm.state.collect { s ->
-                    b.progress.isVisible = s.busy
+                    b.progress.isVisible = s.busy || s.loadingMore
                     b.swipeRefresh.isEnabled = !s.busy
                     b.swipeRefresh.isRefreshing = s.loading
                     val error = s.error + if (s.fields.isNotEmpty()) "\n" + s.fields.values.joinToString("\n") else ""
@@ -70,7 +77,13 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
                     dialog?.setCancelable(!s.busy)
                     dialogError?.text = requireContext().tr(error)
                     dialogFields.forEach { (key, edit) -> (edit.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = s.fields[key] }
-                    if (s.version != rendered && !s.data.empty) { rendered = s.version; render(s) }
+                    if (s.version != rendered && !s.data.empty) {
+                        rendered = s.version
+                        render(s)
+                        b.list.post {
+                            if (!b.list.canScrollVertically(1)) vm.loadNextPage()
+                        }
+                    }
                     b.controls.enableChildren(!s.busy && !s.loading)
                     b.form.enableChildren(!s.busy && !s.loading)
                     b.list.enableChildren(!s.busy && !s.loading)

@@ -8,7 +8,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
 data class WorkspaceState(
-    val loading: Boolean = false, val busy: Boolean = false, val error: String = "",
+    val loading: Boolean = false, val loadingMore: Boolean = false, val busy: Boolean = false, val error: String = "",
     val data: Record = Record(), val extra: Record = Record(), val options: Record = Record(),
     val version: Long = 0, val notice: String = "", val fields: Map<String, String> = emptyMap(),
     val navigation: String = "", val resultId: Long = 0,
@@ -28,17 +28,35 @@ class WorkspaceViewModel(
     val state = _state.asStateFlow()
     private var job: Job? = null
     private var revision = -1L
-    init { load() }
+    init { saved["page"] = 1; load() }
     fun refreshIfChanged() { if (revision != repo.revisions.value && !_state.value.busy && !_state.value.loading) load() }
-    fun tab(value: String) { saved["tab"] = value; saved["page"] = 1; load() }
-    fun scope(value: String) { saved["scope"] = value; saved["page"] = 1; load() }
+    private fun restartLoad() {
+        job?.cancel()
+        _state.update { it.copy(loading = false, loadingMore = false) }
+        load()
+    }
+    fun tab(value: String) { saved["tab"] = value; saved["page"] = 1; restartLoad() }
+    fun scope(value: String) { saved["scope"] = value; saved["page"] = 1; restartLoad() }
     fun page(value: Int) { saved["page"] = value; load() }
-    fun filter(value: Map<String, String>) { query = value; saved["page"] = 1; load() }
-    fun load() {
-        if (_state.value.busy) return
+    fun filter(value: Map<String, String>) { query = value; saved["page"] = 1; restartLoad() }
+    fun refresh() { saved["page"] = 1; restartLoad() }
+    fun loadNextPage() {
+        if (screen !in listOf("stock", "sales", "cash", "customers")) return
+        val state = _state.value
+        if (state.busy || state.loading || state.loadingMore) return
+        val meta = state.data.obj("meta")
+        val current = meta.number("current_page").takeIf { it > 0 } ?: page.toLong()
+        val last = meta.number("last_page").takeIf { it > 0 } ?: current
+        if (current >= last) return
+        saved["page"] = (current + 1).toInt()
+        load(append = true)
+    }
+    fun load(append: Boolean = false) {
+        if (_state.value.busy || _state.value.loading || _state.value.loadingMore) return
+        val requestedPage = page
         job?.cancel()
         job = viewModelScope.launch {
-            _state.update { it.copy(loading = true, error = "", fields = emptyMap()) }
+            _state.update { it.copy(loading = !append, loadingMore = append, error = "", fields = emptyMap()) }
             try {
                 val params = query + mapOf("page" to page.toString(), "per_page" to "20")
                 var extra = Record(); var options = Record()
@@ -71,9 +89,16 @@ class WorkspaceViewModel(
                     else -> Record()
                 }
                 revision = repo.revisions.value
-                _state.update { it.copy(loading = false, data = data, extra = extra, options = options, version = it.version + 1) }
+                _state.update {
+                    it.copy(loading = false, loadingMore = false,
+                        data = if (append) it.data.appendPage(data) else data,
+                        extra = extra, options = options, version = it.version + 1)
+                }
             } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { _state.update { it.copy(loading = false, error = e.message ?: "Unable to load.") } }
+            catch (e: Exception) {
+                if (append) saved["page"] = maxOf(1, requestedPage - 1)
+                _state.update { it.copy(loading = false, loadingMore = false, error = e.message ?: "Unable to load.") }
+            }
         }
     }
     fun command(method: String, path: String, body: Map<String, Any?> = emptyMap(),

@@ -121,15 +121,6 @@ internal fun workspacePresentation(screen: String, state: WorkspaceState, origin
         "stock" -> {
             val pendingRows = state.extra.rows("data")
             val inventoryMeta = data.obj("meta")
-            fun pagination(meta: Record, fallbackTotal: Int, actions: List<CardAction>): Card {
-                val current = maxOf(1L, meta.number("current_page").takeIf { it > 0 } ?: 1L)
-                val last = maxOf(1L, meta.number("last_page").takeIf { it > 0 } ?: 1L)
-                val total = meta.number("total").takeIf { it > 0 } ?: fallbackTotal.toLong()
-                val from = meta.number("from").takeIf { it > 0 } ?: if (total > 0) 1 else 0
-                val to = meta.number("to").takeIf { it > 0 } ?: fallbackTotal.toLong()
-                return Card("stock-pagination-$current-$last", "", value = "Page $current of $last", detail = "$from–$to of $total",
-                    actions = actions, kind = CardKind.PAGINATION)
-            }
             result += Card("stock-header", "My stock", eyebrow = "Inventory custody", status = "${pendingRows.size} pending", kind = CardKind.STOCK_HEADER)
             val k = data.obj("summary").takeUnless { it.empty } ?: state.options.obj("summary")
             result += Card("stock-on-hand", "", kind = CardKind.STOCK_SUMMARY, featured = true,
@@ -142,7 +133,7 @@ internal fun workspacePresentation(screen: String, state: WorkspaceState, origin
                 Card("incoming${r.id}", r.text("reference"), detail = "${r.obj("source_warehouse").name}\n$products products · ${r.number("total_quantity")} units",
                     actions = listOf(action("View receiving", "receiving", r.id)), kind = CardKind.ROW,
                     status = if (r.text("status") == "dispatched") "In transit" else r.text("status"))
-            } + pagination(state.extra.obj("meta"), pendingRows.size, emptyList()), listOf(action("View history", "stock_history"))).copy(status = "${pendingRows.size} transfers")
+            }, listOf(action("View history", "stock_history"))).copy(status = "${pendingRows.size} transfers")
             val inventoryRows = original.filter { it.key !in listOf("summary", "pages") }.map { c ->
                 val stock = data.rows("data").find { "stock${it.id}" == c.key }
                 if (stock == null) row(c) else c.copy(value = "", detail = stock.obj("product").text("sku"), kind = CardKind.TABLE_ROW,
@@ -150,8 +141,7 @@ internal fun workspacePresentation(screen: String, state: WorkspaceState, origin
             }
             if (tab == "stock") {
                 result += group("inventory-table", "Available products", "AVAILABLE INVENTORY",
-                    listOf(Card("stock-search", "", kind = CardKind.CONTROLS)) + inventoryRows +
-                        pagination(inventoryMeta, inventoryRows.size, pages.flatMap { it.actions }))
+                    listOf(Card("stock-search", "", kind = CardKind.CONTROLS)) + inventoryRows)
                     .copy(detail = "Read only · paid and FOC balances in base units")
             }
             else {
@@ -166,26 +156,18 @@ internal fun workspacePresentation(screen: String, state: WorkspaceState, origin
                         status = if (r.text("status") == "received") "received" else r.text("status"))
                 }
                 result += group("stock-history", "Completed stock issues", "INVENTORY CUSTODY",
-                    historyRows + pagination(inventoryMeta, historyRows.size, pages.flatMap { it.actions }))
+                    historyRows)
                     .copy(status = "${inventoryMeta.number("total").takeIf { it > 0 } ?: historyRows.size.toLong()} records")
             }
         }
         "sales" -> {
             val k = data.obj("summary")
             val saleRows = data.rows("data")
-            val meta = data.obj("meta")
             result += header("Sales history", "SALES WORKSPACE")
             result += metrics(Metric("Gross sales", money(k.number("gross_sales")), highlight = true), Metric("Cash sales", money(k.number("cash_sales"))),
                 Metric("Credit sales", money(k.number("credit_sales"))), Metric("Units sold", number(k.number("units_sold"))))
-            val current = maxOf(1L, meta.number("current_page").takeIf { it > 0 } ?: 1L)
-            val last = maxOf(1L, meta.number("last_page").takeIf { it > 0 } ?: 1L)
-            val total = meta.number("total").takeIf { it > 0 } ?: saleRows.size.toLong()
-            val from = meta.number("from").takeIf { it > 0 } ?: if (total > 0) ((current - 1) * saleRows.size + 1) else 0
-            val to = meta.number("to").takeIf { it > 0 } ?: minOf(total, from + saleRows.size - 1)
-            val pagination = Card("sales-pagination-$current-$last", "", value = "Page $current of $last", detail = "$from–$to of $total",
-                actions = pages.flatMap { it.actions }, kind = CardKind.PAGINATION)
             result += group("sales-activity", "Sales activity", "OWN TRANSACTIONS",
-                listOf(controls) + sales(saleRows, original.filter { it.key !in listOf("summary", "pages") }) + pagination,
+                listOf(controls) + sales(saleRows, original.filter { it.key !in listOf("summary", "pages") }),
                 listOf(action("New sale", "new_sale"), action("Filter sales", "sales_filters")))
         }
         "cash" -> {
@@ -220,14 +202,8 @@ internal fun workspacePresentation(screen: String, state: WorkspaceState, origin
                 )
             }
             val meta = data.obj("meta")
-            val current = maxOf(1L, meta.number("current_page").takeIf { it > 0 } ?: 1L)
-            val last = maxOf(1L, meta.number("last_page").takeIf { it > 0 } ?: 1L)
             val total = meta.number("total").takeIf { it > 0 } ?: data.rows("data").size.toLong()
-            val from = meta.number("from").takeIf { it > 0 } ?: if (total > 0) 1 else 0
-            val to = meta.number("to").takeIf { it > 0 } ?: data.rows("data").size.toLong()
-            val pagination = Card("cash-pagination-$current-$last", "", value = "Page $current of $last", detail = "$from–$to of $total",
-                actions = pages.flatMap { it.actions }, kind = CardKind.PAGINATION)
-            val recordChildren = (if (tab == "returns") listOf(Card("cash-scope-$scope", "", kind = CardKind.CONTROLS)) else emptyList()) + cashRows + pagination
+            val recordChildren = (if (tab == "returns") listOf(Card("cash-scope-$scope", "", kind = CardKind.CONTROLS)) else emptyList()) + cashRows
             result += group("cash-records", if (tab == "ledger") "All custody activity" else "Cash returns",
                 if (tab == "ledger") "APPEND-ONLY LEDGER" else "OFFICE HANDOVERS", recordChildren)
                 .copy(status = "$total ${if (tab == "ledger") "entries" else "records"}",
@@ -244,14 +220,8 @@ internal fun workspacePresentation(screen: String, state: WorkspaceState, origin
                     status = if (r.number("outstanding_amount") > 0) "Credit due ${money(r.number("outstanding_amount"))}" else "No credit due", kind = CardKind.ROW)
             }
             val meta = data.obj("meta")
-            val current = maxOf(1L, meta.number("current_page").takeIf { it > 0 } ?: 1L)
-            val last = maxOf(1L, meta.number("last_page").takeIf { it > 0 } ?: 1L)
             val total = meta.number("total").takeIf { it > 0 } ?: data.rows("data").size.toLong()
-            val from = meta.number("from").takeIf { it > 0 } ?: if (total > 0) 1 else 0
-            val to = meta.number("to").takeIf { it > 0 } ?: data.rows("data").size.toLong()
-            val pagination = Card("customers-pagination-$current-$last", "", value = "Page $current of $last", detail = "$from–$to of $total",
-                actions = pages.flatMap { it.actions }, kind = CardKind.PAGINATION)
-            result += group("customer-list", "Customer list", "ASSIGNED WAREHOUSE", listOf(controls) + customerRows + pagination)
+            result += group("customer-list", "Customer list", "ASSIGNED WAREHOUSE", listOf(controls) + customerRows)
                 .copy(status = "$total customers")
         }
         "sale_detail" -> {
