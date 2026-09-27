@@ -22,7 +22,7 @@ data class Record(private val source: JsonObject = JsonObject()) {
     fun strings(key: String): List<String> = source[key]?.takeIf { it.isJsonArray }?.asJsonArray
         ?.filter { it.isJsonPrimitive }?.map { it.asString } ?: emptyList()
     /** Appends a paginated response while retaining the first page summary and the newest metadata. */
-    fun appendPage(next: Record, rowsKey: String = "data"): Record {
+    fun appendPage(next: Record, rowsKey: String = "data", maxRows: Int = 200): Record {
         val merged = source.deepCopy()
         val rows = merged[rowsKey]?.takeIf { it.isJsonArray }?.asJsonArray?.deepCopy()
             ?: com.google.gson.JsonArray()
@@ -33,6 +33,9 @@ data class Record(private val source: JsonObject = JsonObject()) {
             val id = element.takeIf { it.isJsonObject }?.asJsonObject?.get("id")?.takeIf { it.isJsonPrimitive }?.asString
             if (id == null || seen.add(id)) rows.add(element.deepCopy())
         }
+        // Infinite feeds must not retain every record ever visited. Keep a sliding
+        // window so server datasets with tens of thousands of rows have bounded RAM use.
+        while (rows.size() > maxRows.coerceAtLeast(1)) rows.remove(0)
         merged.add(rowsKey, rows)
         next.source["meta"]?.let { merged.add("meta", it.deepCopy()) }
         return Record(merged)
