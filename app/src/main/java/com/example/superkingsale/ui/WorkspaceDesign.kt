@@ -887,11 +887,16 @@ internal fun cardView(context: Context, item: Card, enabled: () -> Boolean, acti
             }
             if (item.key == "sales-activity") {
                 minHeight = context.dp(48); minimumHeight = context.dp(48); cornerRadius = context.dp(6)
+                insetTop = 0; insetBottom = 0; elevation = 0f
+                layoutParams = LinearLayout.LayoutParams(-2, context.dp(48))
                 if (a.key == "sales_filters") {
                     text = ""; setIconResource(R.drawable.ic_filter)
                     iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START; iconPadding = 0
                     iconSize = context.dp(24)
                     iconTint = ColorStateList.valueOf(context.ink(R.color.workspace_accent))
+                    backgroundTintList = ColorStateList.valueOf(context.ink(R.color.workspace_surface))
+                    strokeWidth = context.dp(1)
+                    strokeColor = ColorStateList.valueOf(context.ink(R.color.workspace_accent))
                     setPadding(0, 0, 0, 0); minWidth = context.dp(48); minimumWidth = context.dp(48)
                     layoutParams = LinearLayout.LayoutParams(context.dp(48), context.dp(48)).apply { marginStart = context.dp(6) }
                 } else {
@@ -899,6 +904,7 @@ internal fun cardView(context: Context, item: Card, enabled: () -> Boolean, acti
                     iconPadding = context.dp(6); iconTint = ColorStateList.valueOf(context.ink(R.color.workspace_surface))
                     backgroundTintList = ColorStateList.valueOf(context.ink(R.color.workspace_accent))
                     setTextColor(context.ink(R.color.workspace_surface)); strokeWidth = 0
+                    setPadding(context.dp(12), 0, context.dp(12), 0)
                 }
             }
             if (item.key in listOf("recent-sales", "stock-preview")) {

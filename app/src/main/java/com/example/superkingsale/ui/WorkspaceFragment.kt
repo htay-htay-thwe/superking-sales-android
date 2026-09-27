@@ -112,7 +112,10 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
         b.controls.isVisible = false
     }
     private fun inlineControls(container: LinearLayout, key: String) {
-        if (key != "stock-search" && vm.screen != "customers") container.surface()
+        if (key != "stock-search" && vm.screen !in listOf("customers", "sales")) container.surface()
+        if (vm.screen == "sales") {
+            container.setPadding(0, container.context.dp(2), 0, container.context.dp(4))
+        }
         if (vm.screen == "cash" && (key.startsWith("cash-tabs-") || key.startsWith("cash-scope-"))) {
             container.surface(tint = true, border = false)
             container.setPadding(container.context.dp(4), container.context.dp(4), container.context.dp(4), container.context.dp(4))
