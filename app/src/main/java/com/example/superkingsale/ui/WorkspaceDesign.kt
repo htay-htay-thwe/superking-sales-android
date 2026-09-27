@@ -886,13 +886,14 @@ internal fun cardView(context: Context, item: Card, enabled: () -> Boolean, acti
                 layoutParams = LinearLayout.LayoutParams(context.dp(48), context.dp(48))
             }
             if (item.key == "sales-activity") {
-                minHeight = context.dp(40); minimumHeight = context.dp(40)
+                minHeight = context.dp(48); minimumHeight = context.dp(48); cornerRadius = context.dp(6)
                 if (a.key == "sales_filters") {
                     text = ""; setIconResource(R.drawable.ic_filter)
                     iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START; iconPadding = 0
+                    iconSize = context.dp(24)
                     iconTint = ColorStateList.valueOf(context.ink(R.color.workspace_accent))
-                    setPadding(0, 0, 0, 0); minWidth = context.dp(40); minimumWidth = context.dp(40)
-                    layoutParams = LinearLayout.LayoutParams(context.dp(40), context.dp(40)).apply { marginStart = context.dp(6) }
+                    setPadding(0, 0, 0, 0); minWidth = context.dp(48); minimumWidth = context.dp(48)
+                    layoutParams = LinearLayout.LayoutParams(context.dp(48), context.dp(48)).apply { marginStart = context.dp(6) }
                 } else {
                     setIconResource(R.drawable.ic_new_sale); iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
                     iconPadding = context.dp(6); iconTint = ColorStateList.valueOf(context.ink(R.color.workspace_surface))

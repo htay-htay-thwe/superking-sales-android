@@ -948,7 +948,8 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             layoutParams = android.view.ViewGroup.LayoutParams(-1, -1)
             setPadding(ui.dp(16), ui.dp(12), ui.dp(16), ui.dp(12))
             background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = ui.dp(16).toFloat()
+                val radius = ui.dp(16).toFloat()
+                cornerRadii = floatArrayOf(radius, radius, 0f, 0f, 0f, 0f, radius, radius)
                 setColor(ui.ink(R.color.workspace_surface))
             }
             clipToOutline = true
@@ -1036,14 +1037,13 @@ class WorkspaceFragment : Fragment(R.layout.fragment_workspace) {
             window?.apply {
                 setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
                 addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-                attributes = attributes.apply { dimAmount = .42f; gravity = android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL }
+                attributes = attributes.apply { dimAmount = .42f; gravity = android.view.Gravity.END }
             }
             show()
             window?.let { window ->
-                val width = (resources.displayMetrics.widthPixels * if (resources.configuration.smallestScreenWidthDp >= 600) .52f else .88f).toInt()
-                    .coerceAtMost(ui.dp(440))
-                val height = (resources.displayMetrics.heightPixels * .94f).toInt()
-                window.setLayout(width, height)
+                val tablet = resources.configuration.smallestScreenWidthDp >= 600
+                val width = if (tablet) ui.dp(400) else (resources.displayMetrics.widthPixels * .90f).toInt()
+                window.setLayout(width, android.view.ViewGroup.LayoutParams.MATCH_PARENT)
                 window.decorView.translationX = width.toFloat()
                 window.decorView.animate().translationX(0f).setDuration(220).start()
             }
